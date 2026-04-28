@@ -94,7 +94,7 @@ Examples:
 - WorkflowRunRepository
 
 ## Interfaces
-Use descriptive names, no forced `I` prefix.
+Use descriptive names, forced `I` prefix.
 
 Examples:
 - NodeExecutor
