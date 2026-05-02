@@ -39,6 +39,10 @@ dependencies {
     runtimeOnly 'org.postgresql:postgresql'
     // JWT Dependencies
     implementation 'com.nimbusds:nimbus-jose-jwt:10.9'
+    // Validation Dependencies
+    implementation 'org.springframework.boot:spring-boot-starter-validation'
+    testImplementation 'org.springframework.boot:spring-boot-starter-validation-test'
+    testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
 }
 
 dependencyManagement {

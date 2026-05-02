@@ -4,11 +4,15 @@ import com.project.flow.common.domain.BaseEntity;
 import com.project.flow.common.enums.UserRole;
 import com.project.flow.common.enums.UserStatus;
 import jakarta.persistence.*;
+import lombok.Builder;
+import lombok.Getter;
+import lombok.Setter;
 
 import java.util.Date;
 
 @Entity
 @Table(name = "users", indexes = {@Index(name = "idx_users_email", columnList = "email", unique = true)})
+@Builder
 public class User extends BaseEntity {
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)
