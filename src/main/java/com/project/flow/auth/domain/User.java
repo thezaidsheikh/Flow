@@ -13,6 +13,7 @@ import java.util.Date;
 @Entity
 @Table(name = "users", indexes = {@Index(name = "idx_users_email", columnList = "email", unique = true)})
 @Builder
+@Getter
 public class User extends BaseEntity {
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)

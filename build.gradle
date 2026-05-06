@@ -36,9 +36,15 @@ dependencies {
     testCompileOnly 'org.projectlombok:lombok'
     testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
     testAnnotationProcessor 'org.projectlombok:lombok'
-    runtimeOnly 'org.postgresql:postgresql'
+    // Database Dependencies
+    runtimeOnly 'org.postgresql:postgresql:42.7.11'
+    compileOnly 'org.postgresql:postgresql:42.7.11'
+    implementation 'org.postgresql:postgresql:42.7.11'
     // JWT Dependencies
     implementation 'com.nimbusds:nimbus-jose-jwt:10.9'
+    runtimeOnly 'com.nimbusds:nimbus-jose-jwt:10.9'
+    compileOnly 'com.nimbusds:nimbus-jose-jwt:10.9'
+    testImplementation 'com.nimbusds:nimbus-jose-jwt:10.9'
     // Validation Dependencies
     implementation 'org.springframework.boot:spring-boot-starter-validation'
     testImplementation 'org.springframework.boot:spring-boot-starter-validation-test'
