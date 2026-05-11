@@ -1,7 +1,7 @@
 package com.project.flow.common.exception;
 
+import com.project.flow.common.enums.ErrorCode;
 import java.util.Optional;
-
 import org.springframework.http.HttpStatus;
 
 public class ResourceNotFound extends AppException {

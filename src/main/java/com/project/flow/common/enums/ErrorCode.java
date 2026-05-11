@@ -1,0 +1,14 @@
+package com.project.flow.common.enums;
+
+public enum ErrorCode {
+    VALIDATION_ERROR,
+    RESOURCE_NOT_FOUND,
+    INVALID_CREDENTIALS,
+    RESOURCE_CONFLICT,
+    INTERNAL_SERVER_ERROR,
+    UNAUTHORIZED,
+    FORBIDDEN,
+    EMAIL_ALREADY_EXISTS,
+    TOKEN_EXPIRED,
+    TOKEN_REVOKED
+}

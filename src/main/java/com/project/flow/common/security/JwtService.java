@@ -1,54 +1,45 @@
 package com.project.flow.common.security;
 
+import com.nimbusds.jose.JOSEException;
 import com.nimbusds.jose.JWSAlgorithm;
 import com.nimbusds.jose.JWSHeader;
 import com.nimbusds.jose.crypto.MACSigner;
 import com.nimbusds.jose.crypto.MACVerifier;
 import com.nimbusds.jwt.JWTClaimsSet;
 import com.nimbusds.jwt.SignedJWT;
-import org.springframework.beans.factory.annotation.Value;
-import org.springframework.stereotype.Service;
-
+import com.project.flow.config.JwtConfig;
 import java.text.ParseException;
 import java.util.Date;
 import java.util.UUID;
+import org.springframework.stereotype.Service;
 
 @Service
 public class JwtService {
 
-    private final byte[] secret;
-    private final long jwtExpirationMs;
+    private final JwtConfig jwtConfig;
 
-    public JwtService(@Value("${jwt.secret}") String secret, @Value("${jwt.expiration}") long jwtExpirationMs) {
-        this.secret = secret.getBytes();
-        this.jwtExpirationMs = jwtExpirationMs;
+    public JwtService(JwtConfig jwtConfig) {
+        this.jwtConfig = jwtConfig;
     }
 
-    public String generateAccessToken(UUID userId, String email, String status) {
-        try {
-            Date now = new Date();
-            Date expiration = new Date(now.getTime() + jwtExpirationMs);
+    public String generateAccessToken(UUID userId, String email, String status) throws IllegalStateException, JOSEException {
+        Date now = new Date();
+        Date expiration = new Date(now.getTime() + jwtConfig.getExpiration());
 
-            JWTClaimsSet claimsSet = new JWTClaimsSet.Builder()
-                    .subject(userId.toString())
-                    .claim("userId", userId.toString())
-                    .claim("email", email)
-                    .claim("status", status)
-                    .issueTime(now)
-                    .expirationTime(expiration)
-                    .build();
+        JWTClaimsSet claimsSet = new JWTClaimsSet.Builder()
+            .subject(userId.toString())
+            .claim("userId", userId.toString())
+            .claim("email", email)
+            .claim("status", status)
+            .issueTime(now)
+            .expirationTime(expiration)
+            .build();
 
-            SignedJWT signedJWT = new SignedJWT(
-                    new JWSHeader(JWSAlgorithm.HS256),
-                    claimsSet
-            );
+        SignedJWT signedJWT = new SignedJWT(new JWSHeader(JWSAlgorithm.HS256), claimsSet);
 
-            signedJWT.sign(new MACSigner(secret));
+        signedJWT.sign(new MACSigner(jwtConfig.getSecret().getBytes()));
 
-            return signedJWT.serialize();
-        } catch (Exception e) {
-            throw new RuntimeException("Failed to generate JWT token", e);
-        }
+        return signedJWT.serialize();
     }
 
     public UUID extractUserId(String token) {
@@ -82,7 +73,7 @@ public class JwtService {
     public boolean isTokenValid(String token) {
         try {
             SignedJWT signedJWT = SignedJWT.parse(token);
-            MACVerifier verifier = new MACVerifier(secret);
+            MACVerifier verifier = new MACVerifier(jwtConfig.getSecret().getBytes());
 
             if (!signedJWT.verify(verifier)) {
                 return false;

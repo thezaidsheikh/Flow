@@ -53,6 +53,8 @@ dependencies {
     // Test Database
     testRuntimeOnly 'com.h2database:h2:2.3.232'
     testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
+    implementation 'org.springframework.boot:spring-boot-starter-actuator'
+  testImplementation 'org.springframework.boot:spring-boot-starter-actuator-test'
 }
 
 dependencyManagement {

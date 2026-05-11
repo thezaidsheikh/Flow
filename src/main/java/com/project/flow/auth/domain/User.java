@@ -12,6 +12,7 @@ import lombok.Getter;
 @Builder
 @Getter
 public class User extends BaseEntity {
+
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)
     private String id;

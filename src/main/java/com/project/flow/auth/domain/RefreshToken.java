@@ -2,12 +2,12 @@ package com.project.flow.auth.domain;
 
 import com.project.flow.common.domain.BaseEntity;
 import jakarta.persistence.*;
-
 import java.util.Date;
 
 @Entity
-@Table(name = "refresh_tokens", indexes = {@Index(name = "idx_refresh_token_token", columnList = "token", unique = true), @Index(name = "idx_refresh_token_user", columnList = "user_id")})
+@Table(name = "refresh_tokens", indexes = { @Index(name = "idx_refresh_token_token", columnList = "token", unique = true), @Index(name = "idx_refresh_token_user", columnList = "user_id") })
 public class RefreshToken extends BaseEntity {
+
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)
     private String id;

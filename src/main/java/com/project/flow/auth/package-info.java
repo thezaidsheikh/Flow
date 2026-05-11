@@ -1,4 +1,2 @@
-@org.springframework.modulith.ApplicationModule(
-    type = org.springframework.modulith.ApplicationModule.Type.OPEN
-)
+@org.springframework.modulith.ApplicationModule(type = org.springframework.modulith.ApplicationModule.Type.OPEN)
 package com.project.flow.auth;
