@@ -23,6 +23,6 @@ public class DotenvConfig {
 
         dotenv.entries().forEach(entry -> System.setProperty(entry.getKey(), entry.getValue()));
 
-        logger.info("Loaded ENV File: " + envFile);
+        logger.info(() -> "Loaded ENV File: " + envFile);
     }
 }

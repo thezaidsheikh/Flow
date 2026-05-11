@@ -13,4 +13,8 @@ public class InvalidCredentialsException extends AppException {
     public InvalidCredentialsException(String message, Optional<Object> details) {
         super(HttpStatus.UNAUTHORIZED, ErrorCode.INVALID_CREDENTIALS, message, details);
     }
+
+    public InvalidCredentialsException(String message, Throwable cause, Optional<Object> details) {
+        super(HttpStatus.UNAUTHORIZED, ErrorCode.INVALID_CREDENTIALS, message, cause, details);
+    }
 }

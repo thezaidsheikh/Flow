@@ -13,4 +13,8 @@ public class InvalidRequestException extends AppException {
     public InvalidRequestException(String message, Optional<Object> details) {
         super(HttpStatus.BAD_REQUEST, ErrorCode.VALIDATION_ERROR, message, details);
     }
+
+    public InvalidRequestException(String message, Throwable cause, Optional<Object> details) {
+        super(HttpStatus.BAD_REQUEST, ErrorCode.VALIDATION_ERROR, message, cause, details);
+    }
 }
