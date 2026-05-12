@@ -1,8 +1,8 @@
 package com.project.flow.common.exception;
 
-import org.springframework.http.HttpStatus;
-
+import com.project.flow.common.enums.ErrorCode;
 import java.util.Optional;
+import org.springframework.http.HttpStatus;
 
 public class InvalidRequestException extends AppException {
 
@@ -12,5 +12,9 @@ public class InvalidRequestException extends AppException {
 
     public InvalidRequestException(String message, Optional<Object> details) {
         super(HttpStatus.BAD_REQUEST, ErrorCode.VALIDATION_ERROR, message, details);
+    }
+
+    public InvalidRequestException(String message, Throwable cause, Optional<Object> details) {
+        super(HttpStatus.BAD_REQUEST, ErrorCode.VALIDATION_ERROR, message, cause, details);
     }
 }

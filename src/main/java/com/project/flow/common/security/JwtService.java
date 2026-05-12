@@ -1,97 +1,140 @@
 package com.project.flow.common.security;
 
+import com.nimbusds.jose.JOSEException;
 import com.nimbusds.jose.JWSAlgorithm;
 import com.nimbusds.jose.JWSHeader;
 import com.nimbusds.jose.crypto.MACSigner;
 import com.nimbusds.jose.crypto.MACVerifier;
 import com.nimbusds.jwt.JWTClaimsSet;
 import com.nimbusds.jwt.SignedJWT;
-import org.springframework.beans.factory.annotation.Value;
-import org.springframework.stereotype.Service;
-
+import com.project.flow.common.exception.InternalServerError;
+import com.project.flow.common.exception.TokenExpiredException;
+import com.project.flow.common.exception.UnauthorizedException;
+import com.project.flow.config.JwtConfig;
 import java.text.ParseException;
 import java.util.Date;
+import java.util.Optional;
 import java.util.UUID;
+import org.springframework.stereotype.Service;
 
 @Service
 public class JwtService {
 
-    private final byte[] secret;
-    private final long jwtExpirationMs;
+    private final JwtConfig jwtConfig;
 
-    public JwtService(@Value("${jwt.secret}") String secret, @Value("${jwt.expiration}") long jwtExpirationMs) {
-        this.secret = secret.getBytes();
-        this.jwtExpirationMs = jwtExpirationMs;
+    public JwtService(JwtConfig jwtConfig) {
+        this.jwtConfig = jwtConfig;
     }
 
     public String generateAccessToken(UUID userId, String email, String status) {
+        Date now = new Date();
+        Date expiration = new Date(now.getTime() + jwtConfig.getExpiration());
+
+        JWTClaimsSet claimsSet = new JWTClaimsSet.Builder()
+            .subject(userId.toString())
+            .claim("userId", userId.toString())
+            .claim("email", email)
+            .claim("status", status)
+            .issueTime(now)
+            .expirationTime(expiration)
+            .build();
+
+        SignedJWT signedJWT = new SignedJWT(new JWSHeader(JWSAlgorithm.HS256), claimsSet);
+
         try {
-            Date now = new Date();
-            Date expiration = new Date(now.getTime() + jwtExpirationMs);
-
-            JWTClaimsSet claimsSet = new JWTClaimsSet.Builder()
-                    .subject(userId.toString())
-                    .claim("userId", userId.toString())
-                    .claim("email", email)
-                    .claim("status", status)
-                    .issueTime(now)
-                    .expirationTime(expiration)
-                    .build();
-
-            SignedJWT signedJWT = new SignedJWT(
-                    new JWSHeader(JWSAlgorithm.HS256),
-                    claimsSet
-            );
-
-            signedJWT.sign(new MACSigner(secret));
-
+            signedJWT.sign(new MACSigner(jwtConfig.getSecret().getBytes()));
             return signedJWT.serialize();
-        } catch (Exception e) {
-            throw new RuntimeException("Failed to generate JWT token", e);
+        } catch (JOSEException | IllegalStateException e) {
+            throw new InternalServerError("Failed to generate access token", Optional.empty());
         }
     }
 
     public UUID extractUserId(String token) {
+        JWTClaimsSet claims = extractValidClaims(token);
+        String userId = extractStringClaim(claims, "userId");
         try {
-            SignedJWT signedJWT = SignedJWT.parse(token);
-            String userId = (String) signedJWT.getJWTClaimsSet().getClaim("userId");
             return UUID.fromString(userId);
-        } catch (ParseException e) {
-            throw new RuntimeException("Failed to parse JWT token", e);
+        } catch (IllegalArgumentException e) {
+            throw new UnauthorizedException("Invalid token", Optional.empty());
         }
     }
 
     public String extractEmail(String token) {
-        try {
-            SignedJWT signedJWT = SignedJWT.parse(token);
-            return (String) signedJWT.getJWTClaimsSet().getClaim("email");
-        } catch (ParseException e) {
-            throw new RuntimeException("Failed to parse JWT token", e);
-        }
+        JWTClaimsSet claims = extractValidClaims(token);
+        return extractStringClaim(claims, "email");
     }
 
     public String extractStatus(String token) {
-        try {
-            SignedJWT signedJWT = SignedJWT.parse(token);
-            return (String) signedJWT.getJWTClaimsSet().getClaim("status");
-        } catch (ParseException e) {
-            throw new RuntimeException("Failed to parse JWT token", e);
-        }
+        JWTClaimsSet claims = extractValidClaims(token);
+        return extractStringClaim(claims, "status");
     }
 
     public boolean isTokenValid(String token) {
         try {
-            SignedJWT signedJWT = SignedJWT.parse(token);
-            MACVerifier verifier = new MACVerifier(secret);
-
-            if (!signedJWT.verify(verifier)) {
-                return false;
-            }
-
-            Date expirationTime = signedJWT.getJWTClaimsSet().getExpirationTime();
-            return expirationTime != null && expirationTime.after(new Date());
-        } catch (Exception e) {
+            SignedJWT signedJWT = parseSignedJwt(token);
+            verifySignatureOrThrow(signedJWT);
+            ensureNotExpired(claimsOrThrow(signedJWT));
+            return true;
+        } catch (TokenExpiredException | UnauthorizedException e) {
             return false;
         }
+    }
+
+    private JWTClaimsSet extractValidClaims(String token) {
+        SignedJWT signedJWT = parseSignedJwt(token);
+        verifySignatureOrThrow(signedJWT);
+
+        JWTClaimsSet claimsSet;
+        try {
+            claimsSet = signedJWT.getJWTClaimsSet();
+        } catch (ParseException e) {
+            throw new UnauthorizedException("Invalid token", e, Optional.empty());
+        }
+
+        ensureNotExpired(claimsSet);
+        return claimsSet;
+    }
+
+    private SignedJWT parseSignedJwt(String token) {
+        try {
+            return SignedJWT.parse(token);
+        } catch (ParseException e) {
+            throw new UnauthorizedException("Invalid token", e, Optional.empty());
+        }
+    }
+
+    private JWTClaimsSet claimsOrThrow(SignedJWT signedJWT) {
+        try {
+            return signedJWT.getJWTClaimsSet();
+        } catch (ParseException e) {
+            throw new UnauthorizedException("Invalid token", e, Optional.empty());
+        }
+    }
+
+    private void verifySignatureOrThrow(SignedJWT signedJWT) {
+        try {
+            MACVerifier verifier = new MACVerifier(jwtConfig.getSecret().getBytes());
+            if (!signedJWT.verify(verifier)) {
+                throw new UnauthorizedException("Invalid token", Optional.empty());
+            }
+        } catch (JOSEException | IllegalArgumentException e) {
+            throw new InternalServerError("JWT verification failed", Optional.empty());
+        }
+    }
+
+    private void ensureNotExpired(JWTClaimsSet claimsSet) {
+        Date expirationTime = claimsSet.getExpirationTime();
+        if (expirationTime != null && expirationTime.before(new Date())) {
+            throw new TokenExpiredException("Token expired", Optional.empty());
+        }
+    }
+
+    private String extractStringClaim(JWTClaimsSet claimsSet, String claimName) {
+        Object value = claimsSet.getClaim(claimName);
+        if (value instanceof String stringValue && !stringValue.isBlank()) {
+            return stringValue;
+        }
+
+        throw new UnauthorizedException("Invalid token", Optional.empty());
     }
 }

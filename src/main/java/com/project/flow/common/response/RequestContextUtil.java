@@ -1,15 +1,13 @@
 package com.project.flow.common.response;
 
 import jakarta.servlet.http.HttpServletRequest;
-import org.springframework.stereotype.Component;
-
 import java.util.UUID;
+import org.springframework.stereotype.Component;
 
 @Component
 public class RequestContextUtil {
 
     public String getRequestId(HttpServletRequest request) {
-
         Object requestId = request.getAttribute("requestId");
 
         if (requestId != null) {
