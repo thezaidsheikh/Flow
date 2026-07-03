@@ -2,7 +2,10 @@ package com.project.flow.auth.dto.request;
 
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
+import tools.jackson.databind.PropertyNamingStrategies;
+import tools.jackson.databind.annotation.JsonNaming;
 
+@JsonNaming(PropertyNamingStrategies.SnakeCaseStrategy.class)
 public record RegisterUserReqDto(
     @NotBlank(message = "Email is required") @Email(message = "Email should be valid") String email,
 

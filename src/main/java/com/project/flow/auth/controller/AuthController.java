@@ -22,15 +22,16 @@ public class AuthController {
     private final RegisterUserService registerUserService;
     private final LoginUserService loginUserService;
 
+    // Controller for user registration
     @PostMapping("/register")
     public UserResDto registerUser(@Valid @RequestBody RegisterUserReqDto registerUserReqDto) {
         User user = registerUserService.register(registerUserReqDto);
         return new UserResDto(user.getId(), user.getFirstName() + " " + user.getLastName(), user.getEmail(), user.getStatus().name());
     }
 
+    // Controller for user login
     @PostMapping("/login")
     public AuthResDto loginUser(@Valid @RequestBody LoginReqDto payload) {
-        AuthResDto res = loginUserService.login(payload);
-        return new AuthResDto("access_token", "refresh_token", "Bearer", 3600);
+        return loginUserService.login(payload);
     }
 }

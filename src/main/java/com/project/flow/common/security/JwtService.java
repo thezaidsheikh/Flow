@@ -7,6 +7,7 @@ import com.nimbusds.jose.crypto.MACSigner;
 import com.nimbusds.jose.crypto.MACVerifier;
 import com.nimbusds.jwt.JWTClaimsSet;
 import com.nimbusds.jwt.SignedJWT;
+import com.project.flow.common.enums.UserStatus;
 import com.project.flow.common.exception.InternalServerError;
 import com.project.flow.common.exception.TokenExpiredException;
 import com.project.flow.common.exception.UnauthorizedException;
@@ -26,7 +27,7 @@ public class JwtService {
         this.jwtConfig = jwtConfig;
     }
 
-    public String generateAccessToken(UUID userId, String email, String status) {
+    public String generateAccessToken(UUID userId, String email, UserStatus status) {
         Date now = new Date();
         Date expiration = new Date(now.getTime() + jwtConfig.getExpiration());
 
