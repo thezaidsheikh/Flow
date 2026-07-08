@@ -4,13 +4,17 @@ import com.project.flow.common.domain.BaseEntity;
 import com.project.flow.common.enums.UserRole;
 import com.project.flow.common.enums.UserStatus;
 import jakarta.persistence.*;
+import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
+import lombok.NoArgsConstructor;
 
 @Entity
 @Table(name = "users", indexes = { @Index(name = "idx_users_email", columnList = "email", unique = true) })
 @Builder
 @Getter
+@AllArgsConstructor
+@NoArgsConstructor(force = true)
 public class User extends BaseEntity {
 
     @Id

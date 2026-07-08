@@ -3,9 +3,17 @@ package com.project.flow.auth.domain;
 import com.project.flow.common.domain.BaseEntity;
 import jakarta.persistence.*;
 import java.util.Date;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
 
 @Entity
 @Table(name = "refresh_tokens", indexes = { @Index(name = "idx_refresh_token_token", columnList = "token", unique = true), @Index(name = "idx_refresh_token_user", columnList = "user_id") })
+@Getter
+@Builder
+@AllArgsConstructor
+@NoArgsConstructor(force = true)
 public class RefreshToken extends BaseEntity {
 
     @Id
