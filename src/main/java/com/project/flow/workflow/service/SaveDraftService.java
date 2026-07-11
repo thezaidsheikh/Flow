@@ -69,7 +69,9 @@ public class SaveDraftService {
         nodeRepository.saveAll(nodes);
         edgeRepository.saveAll(edges);
 
-        return draftVersion.toBuilder().nodes(nodes).edges(edges).build();
+        draftVersion.setNodes(nodes);
+        draftVersion.setEdges(edges);
+        return draftVersion;
     }
 
     private WorkflowVersion createNewDraftVersion(String workflowId) {

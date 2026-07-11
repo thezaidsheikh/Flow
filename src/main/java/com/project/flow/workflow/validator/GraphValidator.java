@@ -5,11 +5,8 @@ import com.project.flow.workflow.domain.Edge;
 import com.project.flow.workflow.domain.Node;
 import com.project.flow.workflow.domain.WorkflowVersion;
 import com.project.flow.workflow.enums.NodeType;
-import org.springframework.stereotype.Component;
-
-import java.util.HashSet;
-import java.util.List;
 import java.util.Set;
+import org.springframework.stereotype.Component;
 
 @Component
 public class GraphValidator {
@@ -24,6 +21,11 @@ public class GraphValidator {
 
         if (!hasTrigger) {
             throw new InvalidRequestException("Workflow must have at least one trigger node", null);
+        }
+
+        long triggerCount = version.getNodes().stream().filter(node -> node.getType() == NodeType.TRIGGER).count();
+        if (triggerCount > 1) {
+            throw new InvalidRequestException("Workflow must contain only one trigger node for manual execution", null);
         }
 
         validateEdges(version);

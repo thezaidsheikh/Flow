@@ -9,11 +9,13 @@ import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
+import lombok.Setter;
 
 @Entity
 @Table(name = "workflow_versions", indexes = { @Index(name = "idx_workflow_versions_workflow_id", columnList = "workflow_id"), @Index(name = "idx_workflow_versions_status", columnList = "status") })
 @Builder(toBuilder = true)
 @Getter
+@Setter
 @AllArgsConstructor
 @NoArgsConstructor(force = true)
 public class WorkflowVersion extends BaseEntity {

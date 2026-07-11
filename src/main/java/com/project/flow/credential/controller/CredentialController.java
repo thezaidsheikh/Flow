@@ -6,11 +6,10 @@ import com.project.flow.credential.dto.response.CredentialResponse;
 import com.project.flow.credential.service.CreateCredentialService;
 import com.project.flow.credential.service.DeleteCredentialService;
 import com.project.flow.credential.service.ListCredentialsService;
+import com.project.flow.common.security.CurrentUserProvider;
 import jakarta.validation.Valid;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
-import org.springframework.security.core.Authentication;
-import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
 
 /**
@@ -24,10 +23,11 @@ public class CredentialController {
     private final CreateCredentialService createCredentialService;
     private final ListCredentialsService listCredentialsService;
     private final DeleteCredentialService deleteCredentialService;
+    private final CurrentUserProvider currentUserProvider;
 
     @PostMapping
     public ApiResponse<CredentialResponse> createCredential(@Valid @RequestBody CreateCredentialRequest request) {
-        String userId = getCurrentUserId();
+        String userId = currentUserProvider.getCurrentUserId();
         CredentialResponse response = createCredentialService.execute(request, userId);
         return ApiResponse.<CredentialResponse>builder()
                 .success(true)
@@ -39,7 +39,7 @@ public class CredentialController {
 
     @GetMapping
     public ApiResponse<List<CredentialResponse>> getCredentials() {
-        String userId = getCurrentUserId();
+        String userId = currentUserProvider.getCurrentUserId();
         List<CredentialResponse> response = listCredentialsService.execute(userId);
         return ApiResponse.<List<CredentialResponse>>builder()
                 .success(true)
@@ -51,20 +51,12 @@ public class CredentialController {
 
     @DeleteMapping("/{id}")
     public ApiResponse<Void> deleteCredential(@PathVariable String id) {
-        String userId = getCurrentUserId();
+        String userId = currentUserProvider.getCurrentUserId();
         deleteCredentialService.execute(id, userId);
         return ApiResponse.<Void>builder()
                 .success(true)
                 .statusCode(200)
                 .message("Credential deleted successfully")
                 .build();
-    }
-
-    private String getCurrentUserId() {
-        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
-        if (auth != null && auth.getPrincipal() != null) {
-            return auth.getPrincipal().toString();
-        }
-        return "user-id"; // Fallback to developer mock user-id when authentication is absent
     }
 }

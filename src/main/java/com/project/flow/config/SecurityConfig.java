@@ -30,7 +30,11 @@ public class SecurityConfig {
         return http
             .csrf(csrf -> csrf.disable())
             .cors(CorsConfigurer::disable)
-            .authorizeHttpRequests(auth -> auth.requestMatchers("/auth/**").permitAll().anyRequest().authenticated())
+            .authorizeHttpRequests(auth -> auth
+                .requestMatchers("/auth/register", "/auth/login", "/auth/refresh", "/actuator/health", "/actuator/info").permitAll()
+                .anyRequest()
+                .authenticated()
+            )
             .sessionManagement(sess -> sess.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
             .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class)
             .build();
