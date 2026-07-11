@@ -1,440 +1,201 @@
-# ARCHITECTURE.md
+# Flow Architecture
 
 ## Purpose
-This document is the technical source of truth for Flow. It explains the system design, domain boundaries, execution model, schema strategy, scaling path, and tradeoffs.
 
-Project: **Flow** - Workflow Automation Platform.
+This document describes the architecture that is implemented in the repository today. It is intentionally narrower than the long-term product vision and focuses on the modules, runtime behavior, and constraints of the current MVP.
 
----
+## System shape
 
-# 1. System Overview
+Flow is a modular Spring Boot monolith organized by domain:
 
-Flow is a backend-first workflow automation platform where users build workflows using triggers, logic nodes, delays, and actions.
-
-Example:
 ```text
-Webhook Trigger -> Condition -> Delay -> Send Email
+auth
+workflow
+execution
+run
+credential
+connector
+common
+config
 ```
 
-Current goal:
-- Production-grade MVP
-- Clean modular monolith
-- Async workflow execution
-- Deployable in 20-day capstone timeline
-- Future SaaS expansion ready
+The application exposes a REST API and stores state in PostgreSQL.
 
----
+## Module responsibilities
 
-# 2. Domain Model
+### `auth`
 
-## Core Entities
+- User registration
+- Password-based login
+- JWT access token generation
+- Refresh-token rotation
+- Current-user lookup
 
-### User
-Owns workflows and credentials.
+### `workflow`
 
-### Workflow
-Logical automation container visible to user.
+- Workflow ownership
+- Draft graph persistence
+- Publish validation
+- Workflow read APIs
 
-### WorkflowVersion
-Immutable snapshots.
-States:
-- draft
-- published
-- archived
+### `execution`
 
-### Node
-A step in workflow graph.
-Examples:
-- webhook
-- cron
-- condition
-- delay
-- email
-- slack
-- http_request
+- Node execution strategies
+- Input template resolution
+- Manual workflow orchestration
 
-### Edge
-Directed connection between nodes.
-Supports branching.
+### `run`
 
-### Credential
-Encrypted secrets / tokens.
-Examples:
-- Slack token
-- SMTP config
-- API key
+- Workflow run persistence
+- Node-level execution logs
+- Run query endpoints
 
-### ConnectorDefinition
-Metadata for integrations.
-Defines schema and capability.
+### `credential`
 
-### WorkflowRun
-Single execution instance.
+- Encrypted secret storage
+- Ownership-aware credential access
 
-### NodeRunLog
-Per-node execution trace.
+### `connector`
 
----
+- Connector metadata catalog
+- Provider adapter resolution
+- Manual connector execution
 
-## Cardinality
+### `common`
+
+- Shared exceptions
+- API response models
+- JWT filter
+- Current-user resolution
+
+### `config`
+
+- Security configuration
+- Password encoder
+- JWT properties
+- environment loading
+
+## Persistence model
+
+### Core tables
+
+- `users`
+- `refresh_tokens`
+- `workflows`
+- `workflow_versions`
+- `nodes`
+- `edges`
+- `credentials`
+- `workflow_runs`
+- `node_run_logs`
+
+### Modeling choices
+
+- IDs use UUID generation
+- Node config and run payloads use PostgreSQL `jsonb`
+- Workflow versions are stored separately from the workflow root
+- Credentials store encrypted text instead of plaintext key/value rows
+
+## Execution flow
+
+Current execution is manual and synchronous.
+
 ```text
-User 1 -> many Workflows
-User 1 -> many Credentials
-Workflow 1 -> many WorkflowVersions
-Workflow 1 -> many WorkflowRuns
-WorkflowVersion 1 -> many Nodes
-WorkflowVersion 1 -> many Edges
-WorkflowVersion 1 -> many WorkflowRuns
-WorkflowRun 1 -> many NodeRunLogs
+POST /workflows/{id}/run
+-> load latest published version
+-> create workflow_run row
+-> execute nodes in-process
+-> create node_run_logs per node
+-> mark workflow_run completed or failed
 ```
 
----
-
-# 3. Module Architecture
-
-## Top-Level Modules
-```text
-auth/
-workflow/
-execution/
-run/
-credential/
-connector/
-notification/
-common/
-config/
-```
-
-## Responsibilities
-
-### auth
-Registration, login, JWT auth, ownership context.
-
-### workflow
-CRUD workflows, save draft graph, publish lifecycle.
-
-### execution
-Worker engine, orchestration, retries, scheduling handoff.
-
-### run
-Run history, logs, monitoring APIs.
-
-### credential
-Secure storage of tokens/secrets.
-
-### connector
-Registry of node types/integrations.
-
-### notification
-Failure alerts / future user notifications.
-
-### common
-Shared response models, exceptions, utilities.
-
-### config
-Spring Boot infrastructure configuration.
-
----
-
-# 4. Execution Engine
-
-## Goal
-Execute workflow graph reliably and asynchronously.
-
-## Runtime Flow
-```text
-Trigger received
--> Create WorkflowRun
--> Push job to queue
--> Worker loads published version
--> Execute node by node
--> Persist logs
--> Complete run
-```
-
-## Node Traversal
-Graph starts from trigger node.
-Follow outgoing edges.
-Condition nodes choose edge by label.
-
-Example:
-```text
-Webhook -> Condition
-true  -> Email
-false -> Slack
-```
-
-## Execution Context
-Shared mutable context passed between nodes.
-
-```json
-{
-  "triggerData": {},
-  "previousNodeOutput": {},
-  "variables": {}
-}
-```
-
-## Delay Node
-Do not block thread.
-
-Instead:
-```text
-mark run waiting
-schedule resume job
-resume later
-```
-
-## Retry Policy
-Per node config:
-```json
-{
-  "maxRetries": 3,
-  "backoffSeconds": 5
-}
-```
+## Graph rules
 
----
+Current publish and runtime rules:
 
-# 5. Data Flow
+- at least one node is required
+- exactly one trigger node is supported for manual execution
+- edges must point to existing nodes
+- only condition nodes may have multiple outgoing edges
 
-## User Creates Workflow
-```text
-UI/API -> Workflow Module -> PostgreSQL
-```
+## Supported node runtime semantics
 
-## User Publishes Workflow
-```text
-Draft validated -> Publish version -> Scheduler hooks activated
-```
+### Trigger
 
-## Trigger Fires
-```text
-Webhook / Quartz -> API -> Run row -> Redis queue -> Worker
-```
+- Starts the execution
+- Emits the incoming `triggerData` payload
 
-## Execution Completes
-```text
-Worker -> Node logs -> Run status -> Dashboard APIs
-```
+### Condition
 
----
+- Reads from `trigger`, `variables`, or `previous`
+- Supports `equals`, `not_equals`, and `exists`
+- Chooses the next edge using `true` or `false` labels
 
-# 6. Schema Decisions
+### Action
 
-## Primary Database
-**PostgreSQL (Supabase)**
+- Resolves placeholders in config inputs
+- Loads and decrypts the referenced credential
+- Dispatches to a connector adapter
 
-Chosen for:
-- ACID guarantees
-- strong relational modeling
-- indexing
-- SQL analytics
-- mature ecosystem
+### Delay
 
-## JSONB Usage
-Use JSONB for flexible data:
-- node config
-- connector config schema
-- dynamic payload snapshots
+- Persistable in the graph
+- Not executable yet in the current runtime
 
-Do NOT use JSONB when fixed columns are clearer.
+## Connector architecture
 
-## IDs
-Use UUID primary keys.
-
-Reason:
-- safe public APIs
-- harder to guess
-- future distributed friendly
+Connectors follow an adapter pattern.
 
-## Versioning Strategy
-Use `workflow_versions` instead of cloning workflows.
+Implemented pieces:
 
-Reason:
-- one workflow identity
-- audit history
-- rollback path
-- cleaner analytics
+- `IConnectorAdapter`
+- `ConnectorRegistry`
+- `ExecuteConnectorActionService`
+- `GithubConnectorAdapter`
 
----
-
-# 7. Patterns Used
-
-## Strategy Pattern
-Node execution by type.
+Current productionized action support is limited to GitHub pull-request creation.
 
-Examples:
-- EmailNodeExecutor
-- DelayNodeExecutor
-- ConditionNodeExecutor
+## Security model
 
-## Factory Pattern
-Resolve executor from node subtype.
+- Access tokens are signed with HMAC using Nimbus JOSE JWT
+- Protected endpoints require `Authorization: Bearer <token>`
+- Resource access is scoped by authenticated `userId`
+- Refresh tokens are stored server-side and rotated on refresh
+- Credential secrets are encrypted at rest with AES-GCM
 
-```java
-factory.get(nodeSubType);
-```
+## Operational behavior
 
-## Domain Events
-Loose coupling.
-
-Examples:
-- WorkflowPublishedEvent
-- WorkflowRunCompletedEvent
-
-## Builder Pattern
-Complex DTO / config creation.
-
-## Adapter Pattern
-Third-party integrations.
+### Profiles
 
----
-
-# 8. Security Architecture
+- `dev` is the default Spring profile
+- `.env` is loaded first
+- `.env.dev` or `.env.prod` can override `.env`
 
-## Authentication
-- JWT access token
-- optional refresh token later
+### Schema management
 
-## Authorization
-Resource ownership checks.
-Users can access only own workflows.
+- Hibernate currently runs with `ddl-auto=update` in development
+- There is no migration tool wired in yet
 
-## Secrets
-Credentials encrypted at rest.
-
-## Public Webhooks
-Use secret path/token validation.
-Rate limit via Kong.
+### Health
 
----
+- `GET /actuator/health`
+- `GET /actuator/info`
 
-# 9. Scaling Plan
+## Design tradeoffs in the current MVP
 
-## Current Phase (MVP)
-```text
-Single API service
-Single Worker service
-PostgreSQL
-Redis
-Quartz
-```
-
-## Scale Phase 1
-```text
-Multiple API replicas
-Multiple Worker replicas
-Read replicas
-Redis tuning
-```
-
-## Scale Phase 2
-```text
-Dedicated queue system
-Kafka / RabbitMQ
-Separate execution service
-Connector service extraction
-```
-
-## Scale Phase 3
-```text
-Multi-region
-Tenant isolation
-Advanced observability
-```
-
----
-
-# 10. Observability
-
-## If Time Permits
-Use:
-- Prometheus metrics
-- Grafana dashboards
-
-Track:
-- workflow runs per minute
-- failure rate
-- avg execution time
-- queue depth
-- retries count
-- scheduler lag
-
----
-
-# 11. Tradeoffs Chosen
-
-## Modular Monolith over Microservices
-Pros:
-- faster delivery
-- easier debugging
-- lower ops cost
-
-Tradeoff:
-- less independent scaling initially
-
-## PostgreSQL over NoSQL
-Pros:
-- relational fit
-- ACID
-- easier reporting
-
-Tradeoff:
-- schema discipline required
-
-## Workflow Versions over Workflow Clones
-Pros:
-- cleaner identity
-- easier auditing
-
-Tradeoff:
-- slightly more logic
-
-## Whole Graph Save over Node CRUD APIs
-Pros:
-- simpler frontend sync
-- fewer requests
-
-Tradeoff:
-- larger payloads
-
-## Separate Worker Process
-Pros:
-- isolates long-running tasks
-- scalable workers
-
-Tradeoff:
-- extra deployment unit
-
----
-
-# 12. Future Roadmap
-
-## Product
-- Teams / workspaces
-- RBAC
-- Multi-draft support
-- Auto-save drafts
-- Visual builder UI
-- Marketplace integrations
-- Billing
-- AI workflow generation
-
-## Engineering
-- Kafka event bus
-- Distributed tracing
-- Feature flags
-- Canary deploys
-- Horizontal sharding
-
----
-
-# 13. Golden Rules
-
-- Keep modules independent.
-- Controllers stay thin.
-- Services hold use cases.
-- Execution engine remains stateless where possible.
-- Prefer composition over inheritance.
-- Optimize for clarity over
+- Manual execution is synchronous to keep the current codepath debuggable and small
+- Delay nodes are rejected rather than silently ignored
+- Workflow listing uses simple service composition instead of projection-heavy repository code
+- Connector execution is provider-driven and intentionally narrow until more actions exist
+
+## Planned next steps
+
+These are not implemented yet:
+
+- background workers
+- scheduled and webhook triggers
+- delay resume scheduling
+- richer action-node catalog
+- Flyway or Liquibase migrations
+- OpenAPI generation
+- run retries and backoff policies

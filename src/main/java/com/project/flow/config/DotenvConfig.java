@@ -12,17 +12,21 @@ public class DotenvConfig {
     public void loadEnv() {
         Logger logger = Logger.getLogger(getClass().getName());
 
-        String profile = System.getProperty("spring.profiles.active", "dev");
+        String profile = System.getProperty("spring.profiles.active", System.getenv().getOrDefault("SPRING_PROFILES_ACTIVE", "dev"));
 
         String envFile = switch (profile) {
             case "prod" -> ".env.prod";
             default -> ".env.dev";
         };
 
-        Dotenv dotenv = Dotenv.configure().filename(envFile).ignoreIfMissing().load();
+        loadFile(".env");
+        loadFile(envFile);
 
+        logger.info(() -> "Loaded ENV files: .env and " + envFile);
+    }
+
+    private void loadFile(String fileName) {
+        Dotenv dotenv = Dotenv.configure().filename(fileName).ignoreIfMissing().load();
         dotenv.entries().forEach(entry -> System.setProperty(entry.getKey(), entry.getValue()));
-
-        logger.info(() -> "Loaded ENV File: " + envFile);
     }
 }

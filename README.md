@@ -1,292 +1,248 @@
-# Flow - Workflow Automation Platform
+# Flow
 
-## Overview
-Flow is a backend-first workflow automation platform inspired by tools like Zapier, Make, and n8n. It enables users to build, publish, execute, and monitor automated workflows using triggers, conditions, delays, and actions.
+Flow is a backend-first workflow automation platform built as a modular Spring Boot application. It currently supports user authentication, workflow drafting and publishing, encrypted credential storage, connector metadata, manual workflow execution, and run history with node-level logs.
 
-This project is designed as a **production-minded capstone MVP** with clean architecture, modular monolith design, and future SaaS scalability.
+## Implemented MVP
 
-### Example Workflow
-Webhook Trigger -> Condition Check -> Delay -> Send Email
+- JWT authentication with register, login, refresh-token rotation, and current-user lookup
+- Workflow CRUD for authenticated users
+- Draft graph persistence with nodes and edges
+- Workflow publish flow with graph validation
+- Manual execution of published workflows
+- Run history and node execution logs
+- Encrypted credential storage
+- Connector catalog plus executable GitHub pull-request action
 
-### Current MVP Goals
-- User authentication and workflow ownership
-- Draft and publish workflows
-- Execute workflows asynchronously
-- Webhook and scheduled triggers
-- Run history and node-level logs
-- Modular connector-ready architecture
-- Deployable production setup
+## Current runtime support
 
----
+Supported workflow node types:
 
-## Tech Stack
+- `TRIGGER`: starts a manual run
+- `CONDITION`: evaluates a field from `trigger`, `variables`, or `previous`
+- `ACTION`: executes a connector action with resolved inputs
+- `DELAY`: storable in drafts, but not executable yet in the current synchronous runtime
 
-### Backend
-- **Java 21** - Modern Java features, concurrency, strong OOP support
-- **Spring Boot** - Mature enterprise ecosystem
-- **Spring Security** - JWT authentication / authorization
-- **Spring Data JPA / Hibernate** - ORM layer
+Currently implemented connector actions:
 
-### Database
-- **PostgreSQL** - Relational, ACID compliant
-- **JSONB** - Flexible storage for node configs and graph metadata
-- **Supabase** - Managed PostgreSQL cloud hosting
+- `github.create_pull_request`
 
-### Async / Scheduling / Performance
-- **Redis** - Caching, queue coordination, temporary state
-- **Quartz Scheduler** - Cron / timer workflow scheduling
-- **Separate Worker Process** - Background workflow execution
+## Stack
 
-### Gateway / Infra
-- **Kong Gateway** - API Gateway / Load Balancer / Rate limiting
-- **Docker / Docker Compose** - Local development & deployment
+- Java 21
+- Spring Boot 4
+- Spring Security
+- Spring Data JPA
+- Spring Modulith
+- PostgreSQL
+- Gradle
 
-### Observability (If Time Permits)
-- **Grafana** - Dashboards / Monitoring
-- **Prometheus** - Metrics scraping and alerting
+## Project structure
 
----
-
-## How to Run
-
-## Prerequisites
-- Java 21+
-- Maven 3.9+
-- Docker & Docker Compose
-- Supabase / PostgreSQL instance
-- Redis instance
-
-## Environment Variables
-Create `.env` or `application-local.yml`
-
-```env
-DB_URL=jdbc:postgresql://localhost:5432/flowforge
-DB_USERNAME=postgres
-DB_PASSWORD=postgres
-JWT_SECRET=change_me
-REDIS_HOST=localhost
-REDIS_PORT=6379
+```text
+src/main/java/com/project/flow
+├── auth
+├── common
+├── config
+├── connector
+├── credential
+├── execution
+├── run
+└── workflow
 ```
 
-## Start Infrastructure
+## Prerequisites
+
+- Java 21
+- Docker with Compose support
+
+## Local setup
+
+1. Copy the environment template.
+
+```bash
+cp .env.example .env
+```
+
+2. Start PostgreSQL.
+
 ```bash
 docker compose up -d
 ```
 
-## Run API Server
+3. Start the application.
+
 ```bash
-./mvnw spring-boot:run
+./gradlew bootRun
 ```
 
-## Run Worker Profile
+If your local Gradle home is blocked or not writable, use:
+
 ```bash
-./mvnw spring-boot:run -Dspring-boot.run.profiles=worker
+GRADLE_USER_HOME="$PWD/.gradle-local" ./gradlew bootRun
 ```
 
-## Build Project
+The API starts on `http://localhost:3002/api/v1`.
+
+## Environment variables
+
+`APP_PORT`
+- HTTP port for the API
+
+`DB_URL`
+- Full JDBC URL for PostgreSQL
+
+`DB_USERNAME`
+- Database username
+
+`DB_PASSWORD`
+- Database password
+
+`JWT_SECRET`
+- Secret used to sign access tokens
+
+`JWT_EXPIRATION`
+- Access-token lifetime in milliseconds
+
+`ENCRYPTION_KEY`
+- Optional override for credential encryption; if absent, `JWT_SECRET` is used as the source key material
+
+## Build and test
+
+Run tests:
+
 ```bash
-./mvnw clean package
+./gradlew test
 ```
 
----
+Create the application jar:
 
-## Modules
-
-```text
-flowforge/
-├── auth/          # login, JWT, user identity
-├── workflow/      # workflow CRUD, draft, publish, graph management
-├── execution/     # engine, worker, node executors, retries
-├── run/           # execution history, logs, run APIs
-├── connector/     # integration metadata / plugin registry
-├── credential/    # encrypted tokens / secrets
-├── notification/  # alerts / failure notifications
-├── common/        # shared utilities / response wrappers / exceptions
-├── config/        # Spring configs
-```
-
----
-
-## Useful Commands
-
-## Run Tests
 ```bash
-./mvnw test
+./gradlew build
 ```
 
-## Run Specific Profile
-```bash
-./mvnw spring-boot:run -Dspring-boot.run.profiles=local
+## API surface
+
+### Auth
+
+- `POST /auth/register`
+- `POST /auth/login`
+- `POST /auth/refresh`
+- `GET /auth/me`
+
+### Workflows
+
+- `POST /workflows`
+- `GET /workflows`
+- `GET /workflows/{id}`
+- `PUT /workflows/{id}/draft`
+- `POST /workflows/{id}/publish`
+- `POST /workflows/{id}/run`
+
+### Runs
+
+- `GET /workflows/{id}/runs`
+- `GET /runs/{runId}`
+- `GET /runs/{runId}/logs`
+
+### Credentials
+
+- `POST /credentials`
+- `GET /credentials`
+- `DELETE /credentials/{id}`
+
+### Connectors
+
+- `GET /connectors`
+- `GET /connectors/{provider}`
+- `POST /connectors/{provider}/actions/{action}/execute`
+
+## Workflow graph payload
+
+Draft save request:
+
+```json
+{
+  "nodes": [
+    {
+      "id": "trigger-node",
+      "name": "Manual Trigger",
+      "type": "TRIGGER",
+      "position_x": 100,
+      "position_y": 80,
+      "config": {}
+    },
+    {
+      "id": "condition-node",
+      "name": "Check Repository",
+      "type": "CONDITION",
+      "position_x": 320,
+      "position_y": 80,
+      "config": {
+        "source": "trigger",
+        "field": "repository",
+        "operator": "equals",
+        "value": "octocat/Hello-World"
+      }
+    }
+  ],
+  "edges": [
+    {
+      "id": "edge-1",
+      "source_node_id": "trigger-node",
+      "target_node_id": "condition-node"
+    }
+  ]
+}
 ```
 
-## Lint / Verify
-```bash
-./mvnw verify
+Supported condition operators:
+
+- `equals`
+- `not_equals`
+- `exists`
+
+## Action node config
+
+GitHub pull-request action example:
+
+```json
+{
+  "provider": "github",
+  "action": "create_pull_request",
+  "credentialId": "credential-id",
+  "inputs": {
+    "repository": "${trigger.repository}",
+    "title": "Create PR for ${previous.branch}",
+    "head": "${previous.branch}",
+    "base": "${variables.baseBranch}",
+    "body": "Opened by Flow"
+  }
+}
 ```
 
-## Generate Docs
-```bash
-./mvnw javadoc:javadoc
-```
+Available placeholder roots:
 
----
+- `${trigger.<field>}`
+- `${variables.<field>}`
+- `${previous.<field>}`
 
-## API Docs
+## Run behavior
 
-### Swagger UI
-```text
-http://localhost:8080/swagger-ui/index.html
-```
+- Runs execute synchronously in the current application process.
+- Each executed node writes a log entry.
+- Branching is only supported on `CONDITION` nodes.
+- Delay nodes are rejected during execution with a clear validation error.
 
-### OpenAPI JSON
-```text
-http://localhost:8080/v3/api-docs
-```
+## Current limitations
 
-### Core API Groups
+- No scheduler, webhook trigger, queue worker, or background execution yet
+- No Slack, email, or HTTP action nodes yet
+- No refresh-token revocation endpoint
+- No Swagger/OpenAPI UI bundled yet
+- No Flyway/Liquibase migrations yet; schema is managed by Hibernate in the current MVP
 
-#### Auth
-- POST /api/v1/auth/register
-- POST /api/v1/auth/login
-- GET /api/v1/auth/me
+## Documentation
 
-#### Workflow
-- POST /api/v1/workflows
-- GET /api/v1/workflows
-- GET /api/v1/workflows/{id}
-- PUT /api/v1/workflows/{id}/draft
-- POST /api/v1/workflows/{id}/publish
-- POST /api/v1/workflows/{id}/run
-
-#### Runs
-- GET /api/v1/workflows/{id}/runs
-- GET /api/v1/runs/{runId}
-- GET /api/v1/runs/{runId}/logs
-
-#### Public Hooks
-- POST /hooks/{workflowId}/{secret}
-
----
-
-## Folder Structure
-
-```text
-src/main/java/com/flowforge
-├── common/
-├── config/
-├── auth/
-│   ├── controller/
-│   ├── service/
-│   ├── repository/
-│   ├── domain/
-│   └── dto/
-├── workflow/
-├── execution/
-├── run/
-├── connector/
-├── credential/
-└── notification/
-```
-
-### Module Pattern
-Each module follows:
-
-```text
-controller -> HTTP layer
-service    -> business use cases
-repository -> persistence
-entity     -> domain models
-dto        -> requests/responses
-validator  -> rules
-mapper     -> transformations
-```
-
----
-
-## Roadmap
-### MVP
-- Auth
-- Workflow CRUD
-- Draft + Publish
-- Webhook trigger
-- Scheduler trigger
-- Condition / Delay / Email nodes
-- Run history
-- Logs
-
-### Future Enhancements
-- Teams / Workspaces
-- RBAC
-- Multiple drafts
-- Visual drag-drop builder
-- Marketplace connectors
-- Billing / subscriptions
-- Real-time run monitoring
-- Kafka event bus
-- Horizontal worker scaling
-- AI workflow generation
-
-### Product Features
-- Visual drag-drop workflow builder UI
-- Multi-user teams / workspaces
-- RBAC permissions
-- Multiple drafts / autosave
-- Templates marketplace
-- Billing / subscriptions
-- Public workflow sharing
-- Real-time execution monitoring
-- WebSocket updates
-- AI workflow generation assistant
-
-### Integrations
-- Slack
-- Gmail
-- Twilio
-- Google Sheets
-- Stripe
-- Salesforce
-- Notion
-- Webhooks
-
-### Engineering Enhancements
-- Kafka / RabbitMQ event bus
-- Horizontal worker scaling
-- Distributed tracing
-- Rate limiting policies
-- Feature flags
-- Canary deployments
-- Multi-region failover
-
-### Observability
-- Grafana dashboards
-- Prometheus alerts
-- Error budgets / SLOs
-
----
-## 🤝 Engineering Principles
-
-- SOLID Principles
-- Separation of Concerns
-- Feature-based modules
-- Standardized API contracts
-- Clean Architecture mindset
-- Extensible node executor model
-
----
-
-## 📄 Docs
-
-- `README.md` → onboarding
-- `ARCHITECTURE.md` → system design truth
-- `AGENTS.md` → AI coding rules
-- `src/**/AGENTS.md` → local module rules
-
----
-
-## Project Philosophy
-Build a clean, simple, production-grade MVP first.
-Optimize for maintainability, scalability, and future SaaS growth.
-Avoid overengineering while keeping strong foundations.
-
-# 🏁 Status
-Currently in active development as capstone project with production-grade engineering standards.
+- [README.md](/Users/thezaidsheikh/Zaid%20-%20F1/Sheikh's%20Personal%20Projects/flow/README.md)
+- [ARCHITECTURE.md](/Users/thezaidsheikh/Zaid%20-%20F1/Sheikh's%20Personal%20Projects/flow/ARCHITECTURE.md)
+- [HELP.md](/Users/thezaidsheikh/Zaid%20-%20F1/Sheikh's%20Personal%20Projects/flow/HELP.md)

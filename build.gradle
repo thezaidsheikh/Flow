@@ -8,9 +8,8 @@ group = 'com.project'
 version = '0.0.1-SNAPSHOT'
 
 java {
-    toolchain {
-        languageVersion = JavaLanguageVersion.of(21)
-    }
+    sourceCompatibility = JavaVersion.VERSION_21
+    targetCompatibility = JavaVersion.VERSION_21
 }
 
 repositories {
@@ -25,37 +24,26 @@ dependencies {
     implementation 'org.springframework.boot:spring-boot-starter-data-jpa'
     implementation 'org.springframework.boot:spring-boot-starter-security'
     implementation 'org.springframework.boot:spring-boot-starter-web'
+    implementation 'org.springframework.boot:spring-boot-starter-validation'
+    implementation 'org.springframework.boot:spring-boot-starter-actuator'
     implementation 'com.fasterxml.jackson.core:jackson-databind'
     implementation 'org.springframework.modulith:spring-modulith-starter-core'
     implementation 'org.springframework.modulith:spring-modulith-starter-jpa'
+    implementation 'org.postgresql:postgresql:42.7.11'
+    implementation 'com.nimbusds:nimbus-jose-jwt:10.9'
+    implementation 'io.github.cdimascio:dotenv-java:3.0.2'
+
     compileOnly 'org.projectlombok:lombok'
     annotationProcessor 'org.projectlombok:lombok'
-    testImplementation 'org.springframework.boot:spring-boot-starter-data-jpa-test'
+
+    testRuntimeOnly 'com.h2database:h2:2.3.232'
+    testImplementation 'org.springframework.boot:spring-boot-starter-test'
     testImplementation 'org.springframework.boot:spring-boot-starter-security-test'
-    testImplementation 'org.springframework.boot:spring-boot-starter-webmvc-test'
     testImplementation 'org.springframework.modulith:spring-modulith-starter-test'
+    testImplementation 'com.nimbusds:nimbus-jose-jwt:10.9'
     testCompileOnly 'org.projectlombok:lombok'
     testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
     testAnnotationProcessor 'org.projectlombok:lombok'
-    // Database Dependencies
-    runtimeOnly 'org.postgresql:postgresql:42.7.11'
-    compileOnly 'org.postgresql:postgresql:42.7.11'
-    implementation 'org.postgresql:postgresql:42.7.11'
-    // JWT Dependencies
-    implementation 'com.nimbusds:nimbus-jose-jwt:10.9'
-    runtimeOnly 'com.nimbusds:nimbus-jose-jwt:10.9'
-    compileOnly 'com.nimbusds:nimbus-jose-jwt:10.9'
-    testImplementation 'com.nimbusds:nimbus-jose-jwt:10.9'
-    // Validation Dependencies
-    implementation 'org.springframework.boot:spring-boot-starter-validation'
-    testImplementation 'org.springframework.boot:spring-boot-starter-validation-test'
-    // Environment Variables Loading
-    implementation 'io.github.cdimascio:dotenv-java:3.0.2'
-    // Test Database
-    testRuntimeOnly 'com.h2database:h2:2.3.232'
-    testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
-    implementation 'org.springframework.boot:spring-boot-starter-actuator'
-  testImplementation 'org.springframework.boot:spring-boot-starter-actuator-test'
 }
 
 dependencyManagement {
@@ -66,4 +54,8 @@ dependencyManagement {
 
 tasks.named('test') {
     useJUnitPlatform()
+}
+
+tasks.withType(JavaCompile).configureEach {
+    options.release = 21
 }

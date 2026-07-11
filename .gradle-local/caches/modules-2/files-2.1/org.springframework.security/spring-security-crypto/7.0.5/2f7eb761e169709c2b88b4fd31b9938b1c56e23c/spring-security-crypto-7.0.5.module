@@ -1,0 +1,181 @@
+{
+  "formatVersion": "1.1",
+  "component": {
+    "group": "org.springframework.security",
+    "module": "spring-security-crypto",
+    "version": "7.0.5",
+    "attributes": {
+      "org.gradle.status": "release"
+    }
+  },
+  "createdBy": {
+    "gradle": {
+      "version": "8.14.4"
+    }
+  },
+  "variants": [
+    {
+      "name": "apiElements",
+      "attributes": {
+        "org.gradle.category": "library",
+        "org.gradle.dependency.bundling": "external",
+        "org.gradle.jvm.version": 17,
+        "org.gradle.libraryelements": "jar",
+        "org.gradle.usage": "java-api"
+      },
+      "files": [
+        {
+          "name": "spring-security-crypto-7.0.5.jar",
+          "url": "spring-security-crypto-7.0.5.jar",
+          "size": 111792,
+          "sha512": "d51c9576074c95321d41848745fd945725d4215fa2727b78233506550e54981c737ed41393fead75bd3cb85b483d392f2cca5900c6624e61f0013f93e0961166",
+          "sha256": "fa2dbe7ce6aea8b3b0cc82bcd09b5b4ef030cdac51b85e54d785d85f1a3d42d9",
+          "sha1": "e18e190fe0b55b0e28ae4a64c59bb2efe5406466",
+          "md5": "d98126573edf9e16efd848da8ef8dd6e"
+        }
+      ]
+    },
+    {
+      "name": "runtimeElements",
+      "attributes": {
+        "org.gradle.category": "library",
+        "org.gradle.dependency.bundling": "external",
+        "org.gradle.jvm.version": 17,
+        "org.gradle.libraryelements": "jar",
+        "org.gradle.usage": "java-runtime"
+      },
+      "files": [
+        {
+          "name": "spring-security-crypto-7.0.5.jar",
+          "url": "spring-security-crypto-7.0.5.jar",
+          "size": 111792,
+          "sha512": "d51c9576074c95321d41848745fd945725d4215fa2727b78233506550e54981c737ed41393fead75bd3cb85b483d392f2cca5900c6624e61f0013f93e0961166",
+          "sha256": "fa2dbe7ce6aea8b3b0cc82bcd09b5b4ef030cdac51b85e54d785d85f1a3d42d9",
+          "sha1": "e18e190fe0b55b0e28ae4a64c59bb2efe5406466",
+          "md5": "d98126573edf9e16efd848da8ef8dd6e"
+        }
+      ]
+    },
+    {
+      "name": "testFixturesApiElements",
+      "attributes": {
+        "org.gradle.category": "library",
+        "org.gradle.dependency.bundling": "external",
+        "org.gradle.jvm.version": 17,
+        "org.gradle.libraryelements": "jar",
+        "org.gradle.usage": "java-api"
+      },
+      "dependencies": [
+        {
+          "group": "org.springframework.security",
+          "module": "spring-security-crypto",
+          "version": {
+            "requires": "7.0.5"
+          }
+        }
+      ],
+      "files": [
+        {
+          "name": "spring-security-crypto-7.0.5-test-fixtures.jar",
+          "url": "spring-security-crypto-7.0.5-test-fixtures.jar",
+          "size": 6607,
+          "sha512": "03a0cc1673a680591b58a1da749d4323a2b6f0703ff8d0bb0cd7304ed655ba42cae1d3daabc691df3771924e6bb480dc9eaff7c86b8610c61cf3fba48bb2e552",
+          "sha256": "c79b0ab74613791e2cb697b11e31ab74510a54e40cdd0a7f17aab78c9226d2f7",
+          "sha1": "49499440e015779a20d25a82834d9c298eba2ef8",
+          "md5": "dada481ca19d692fc52b6e8716116884"
+        }
+      ],
+      "capabilities": [
+        {
+          "group": "org.springframework.security",
+          "name": "spring-security-crypto-test-fixtures",
+          "version": "7.0.5"
+        }
+      ]
+    },
+    {
+      "name": "testFixturesRuntimeElements",
+      "attributes": {
+        "org.gradle.category": "library",
+        "org.gradle.dependency.bundling": "external",
+        "org.gradle.jvm.version": 17,
+        "org.gradle.libraryelements": "jar",
+        "org.gradle.usage": "java-runtime"
+      },
+      "dependencies": [
+        {
+          "group": "org.assertj",
+          "module": "assertj-core",
+          "version": {
+            "requires": "3.27.7"
+          }
+        },
+        {
+          "group": "org.springframework.security",
+          "module": "spring-security-crypto",
+          "version": {
+            "requires": "7.0.5"
+          }
+        }
+      ],
+      "files": [
+        {
+          "name": "spring-security-crypto-7.0.5-test-fixtures.jar",
+          "url": "spring-security-crypto-7.0.5-test-fixtures.jar",
+          "size": 6607,
+          "sha512": "03a0cc1673a680591b58a1da749d4323a2b6f0703ff8d0bb0cd7304ed655ba42cae1d3daabc691df3771924e6bb480dc9eaff7c86b8610c61cf3fba48bb2e552",
+          "sha256": "c79b0ab74613791e2cb697b11e31ab74510a54e40cdd0a7f17aab78c9226d2f7",
+          "sha1": "49499440e015779a20d25a82834d9c298eba2ef8",
+          "md5": "dada481ca19d692fc52b6e8716116884"
+        }
+      ],
+      "capabilities": [
+        {
+          "group": "org.springframework.security",
+          "name": "spring-security-crypto-test-fixtures",
+          "version": "7.0.5"
+        }
+      ]
+    },
+    {
+      "name": "javadocElements",
+      "attributes": {
+        "org.gradle.category": "documentation",
+        "org.gradle.dependency.bundling": "external",
+        "org.gradle.docstype": "javadoc",
+        "org.gradle.usage": "java-runtime"
+      },
+      "files": [
+        {
+          "name": "spring-security-crypto-7.0.5-javadoc.jar",
+          "url": "spring-security-crypto-7.0.5-javadoc.jar",
+          "size": 265540,
+          "sha512": "30e4b512bd4d4c8d278fe82cce35ef85a2e4825859c7da653018d702c51dd20726562f7b5238e1ad81a6b3ae51953f1c632e8508035c006c30cc62f5a0b07374",
+          "sha256": "5788f734fb9ba9a4b3866b271dab8b756175216d8f01095eb403a3a95d349d58",
+          "sha1": "7010619ad7705a96c593d48bc1d0df46413dbace",
+          "md5": "1bafc8e263754964124a19d60eb6be96"
+        }
+      ]
+    },
+    {
+      "name": "sourcesElements",
+      "attributes": {
+        "org.gradle.category": "documentation",
+        "org.gradle.dependency.bundling": "external",
+        "org.gradle.docstype": "sources",
+        "org.gradle.usage": "java-runtime"
+      },
+      "files": [
+        {
+          "name": "spring-security-crypto-7.0.5-sources.jar",
+          "url": "spring-security-crypto-7.0.5-sources.jar",
+          "size": 101552,
+          "sha512": "7f6a509f91e41645144ede7a966439990f846fa32a59242ee0967192937339de7fc6705ebca150f97677198fc6b1998949cc8f99610fd04cc1f50bc48f1705e2",
+          "sha256": "253c3b0b15c28e9c7dc806d5a2159538c78d4356f32f57ff3f36c5865bca05d2",
+          "sha1": "34745886d7a3c9dbe5713b89eb5e7d2ce718839d",
+          "md5": "c98284289fe6e772783c0e092555c09f"
+        }
+      ]
+    }
+  ]
+}

@@ -8,11 +8,13 @@ import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
+import lombok.Setter;
 
 @Entity
 @Table(name = "workflows", indexes = { @Index(name = "idx_workflows_user_id", columnList = "user_id"), @Index(name = "idx_workflows_name", columnList = "name") })
 @Builder(toBuilder = true)
 @Getter
+@Setter
 @AllArgsConstructor
 @NoArgsConstructor(force = true)
 public class Workflow extends BaseEntity {

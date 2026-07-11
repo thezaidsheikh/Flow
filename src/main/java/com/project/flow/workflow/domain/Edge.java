@@ -6,6 +6,7 @@ import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
+import lombok.Setter;
 
 @Entity
 @Table(name = "edges", indexes = {
@@ -15,6 +16,7 @@ import lombok.NoArgsConstructor;
 })
 @Builder
 @Getter
+@Setter
 @AllArgsConstructor
 @NoArgsConstructor(force = true)
 public class Edge extends BaseEntity {

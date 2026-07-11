@@ -7,6 +7,7 @@ import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
+import lombok.Setter;
 import org.hibernate.annotations.JdbcTypeCode;
 import org.hibernate.type.SqlTypes;
 
@@ -17,6 +18,7 @@ import org.hibernate.type.SqlTypes;
 })
 @Builder
 @Getter
+@Setter
 @AllArgsConstructor
 @NoArgsConstructor(force = true)
 public class Node extends BaseEntity {

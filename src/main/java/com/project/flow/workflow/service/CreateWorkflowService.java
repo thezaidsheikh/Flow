@@ -32,6 +32,7 @@ public class CreateWorkflowService {
 
         draftVersion = workflowVersionRepository.save(draftVersion);
 
-        return workflow.toBuilder().versions(java.util.List.of(draftVersion)).build();
+        workflow.setVersions(java.util.List.of(draftVersion));
+        return workflow;
     }
 }
