@@ -88,7 +88,7 @@ public class WorkflowController {
             version
                 .getNodes()
                 .stream()
-                .map(node -> new NodeResponse(node.getId(), node.getName(), node.getType().name(), node.getSubType(), node.getPositionX(), node.getPositionY(), node.getConfig()))
+                .map(node -> new NodeResponse(node.getId(), node.getClientId(), node.getName(), node.getType().name(), node.getSubType(), node.getPositionX(), node.getPositionY(), node.getConfig()))
                 .toList(),
             version
                 .getEdges()

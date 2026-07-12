@@ -27,6 +27,9 @@ public class Node extends BaseEntity {
     @GeneratedValue(strategy = GenerationType.UUID)
     private String id;
 
+    @Column(name = "client_id", length = 100)
+    private String clientId;
+
     @Column(name = "workflow_version_id", nullable = false)
     private String workflowVersionId;
 

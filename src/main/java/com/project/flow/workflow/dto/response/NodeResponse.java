@@ -6,6 +6,7 @@ import com.fasterxml.jackson.databind.annotation.JsonNaming;
 @JsonNaming(PropertyNamingStrategies.SnakeCaseStrategy.class)
 public record NodeResponse(
     String id,
+    String clientId,
     String name,
     String type,
     String subType,

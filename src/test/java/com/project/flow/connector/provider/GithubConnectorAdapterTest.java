@@ -105,21 +105,33 @@ class GithubConnectorAdapterTest {
     }
 
     @Test
-    void shouldThrowInvalidRequestExceptionWhenInputIsMissing() {
+    void shouldDefaultHeadAndBaseWhenMissing() {
         // Arrange
-        Map<String, Object> inputs = Map.of(
-                "repository", "octocat/Hello-World",
-                "title", "Amazing PR",
-                "head", "feature"
-                // base is missing
-        );
+        Map<String, Object> inputs = new HashMap<>();
+        inputs.put("repository", "octocat/Hello-World");
+        inputs.put("title", "Amazing PR");
+        // head and base are missing — should default
+
         Map<String, String> secrets = Map.of("token", "ghp_token");
 
-        // Act & Assert
-        InvalidRequestException ex = assertThrows(
-                InvalidRequestException.class,
-                () -> adapter.execute("create_pull_request", inputs, secrets)
-        );
-        assertTrue(ex.getMessage().contains("Base branch input is required"));
+        Map<String, Object> mockResponseBody = new HashMap<>();
+        mockResponseBody.put("html_url", "https://github.com/octocat/Hello-World/pull/1");
+        mockResponseBody.put("number", 1);
+        mockResponseBody.put("id", 100L);
+        mockResponseBody.put("state", "open");
+
+        when(restTemplate.exchange(anyString(), eq(HttpMethod.POST), any(HttpEntity.class), eq(Map.class)))
+                .thenReturn(new ResponseEntity<>(mockResponseBody, HttpStatus.CREATED));
+
+        // Act
+        Map<String, Object> result = adapter.execute("create_pull_request", inputs, secrets);
+
+        // Assert
+        assertNotNull(result);
+        ArgumentCaptor<HttpEntity> captor = ArgumentCaptor.forClass(HttpEntity.class);
+        verify(restTemplate).exchange(anyString(), eq(HttpMethod.POST), captor.capture(), eq(Map.class));
+        Map bodyMap = (Map) captor.getValue().getBody();
+        assertEquals("feature/flow-automation", bodyMap.get("head"));
+        assertEquals("main", bodyMap.get("base"));
     }
 }

@@ -2,6 +2,7 @@ package com.project.flow.workflow.repository;
 
 import com.project.flow.workflow.domain.Node;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
@@ -10,5 +11,6 @@ import java.util.List;
 public interface NodeRepository extends JpaRepository<Node, String> {
     List<Node> findByWorkflowVersionId(String workflowVersionId);
 
+    @Modifying(clearAutomatically = true)
     void deleteByWorkflowVersionId(String workflowVersionId);
 }
