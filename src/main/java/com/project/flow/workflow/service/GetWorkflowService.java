@@ -62,8 +62,10 @@ public class GetWorkflowService {
     public WorkflowVersion loadGraph(WorkflowVersion version) {
         List<Node> nodes = nodeRepository.findByWorkflowVersionId(version.getId());
         List<Edge> edges = edgeRepository.findByWorkflowVersionId(version.getId());
-        version.setNodes(nodes);
-        version.setEdges(edges);
+        version.getNodes().clear();
+        version.getNodes().addAll(nodes);
+        version.getEdges().clear();
+        version.getEdges().addAll(edges);
         return version;
     }
 }

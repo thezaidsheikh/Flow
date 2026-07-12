@@ -49,7 +49,7 @@ public class GithubConnectorAdapter implements IConnectorAdapter {
         }
 
         // 2. Retrieve & validate inputs
-        String repository = (String) inputs.get("repository"); // Format: owner/repo
+        String repository = (String) inputs.getOrDefault("repository", inputs.get("repo")); // Format: owner/repo
         String title = (String) inputs.get("title");
         String head = (String) inputs.get("head");
         String base = (String) inputs.get("base");
@@ -62,10 +62,10 @@ public class GithubConnectorAdapter implements IConnectorAdapter {
             throw new InvalidRequestException("Title input is required", null);
         }
         if (head == null || head.isBlank()) {
-            throw new InvalidRequestException("Head branch input is required", null);
+            head = "feature/flow-automation";
         }
         if (base == null || base.isBlank()) {
-            throw new InvalidRequestException("Base branch input is required", null);
+            base = "main";
         }
 
         // 3. Invoke GitHub API: POST /repos/{owner}/{repo}/pulls

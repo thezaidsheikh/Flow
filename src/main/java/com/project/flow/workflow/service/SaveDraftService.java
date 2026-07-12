@@ -7,24 +7,29 @@ import com.project.flow.workflow.domain.WorkflowVersion;
 import com.project.flow.workflow.dto.request.SaveDraftRequest;
 import com.project.flow.workflow.enums.NodeType;
 import com.project.flow.workflow.enums.VersionStatus;
-import com.project.flow.workflow.repository.EdgeRepository;
-import com.project.flow.workflow.repository.NodeRepository;
 import com.project.flow.workflow.repository.WorkflowRepository;
 import com.project.flow.workflow.repository.WorkflowVersionRepository;
+import jakarta.persistence.EntityManager;
+import jakarta.persistence.PersistenceContext;
+import java.util.LinkedHashMap;
 import java.util.List;
-import java.util.UUID;
-import lombok.RequiredArgsConstructor;
+import java.util.Map;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 @Service
-@RequiredArgsConstructor
 public class SaveDraftService {
 
     private final WorkflowRepository workflowRepository;
     private final WorkflowVersionRepository workflowVersionRepository;
-    private final NodeRepository nodeRepository;
-    private final EdgeRepository edgeRepository;
+
+    @PersistenceContext
+    private EntityManager entityManager;
+
+    public SaveDraftService(WorkflowRepository workflowRepository, WorkflowVersionRepository workflowVersionRepository) {
+        this.workflowRepository = workflowRepository;
+        this.workflowVersionRepository = workflowVersionRepository;
+    }
 
     @Transactional
     public WorkflowVersion execute(String workflowId, SaveDraftRequest request, String userId) {
@@ -32,45 +37,48 @@ public class SaveDraftService {
 
         WorkflowVersion draftVersion = workflowVersionRepository.findByWorkflowIdAndStatus(workflowId, VersionStatus.DRAFT).orElseGet(() -> createNewDraftVersion(workflowId));
 
-        nodeRepository.deleteByWorkflowVersionId(draftVersion.getId());
-        edgeRepository.deleteByWorkflowVersionId(draftVersion.getId());
+        draftVersion.getNodes().clear();
+        draftVersion.getEdges().clear();
 
         List<Node> nodes = request
             .nodes()
             .stream()
-            .map(nodeDto ->
-                Node.builder()
-                    .id(nodeDto.id() != null ? nodeDto.id() : UUID.randomUUID().toString())
-                    .workflowVersionId(draftVersion.getId())
-                    .name(nodeDto.name())
-                    .type(NodeType.valueOf(nodeDto.type().toUpperCase()))
-                    .subType(nodeDto.subType())
-                    .positionX(nodeDto.positionX())
-                    .positionY(nodeDto.positionY())
-                    .config(nodeDto.config())
-                    .build()
-            )
+            .map(nodeDto -> Node.builder()
+                .workflowVersionId(draftVersion.getId())
+                .name(nodeDto.name())
+                .type(NodeType.valueOf(nodeDto.type().toUpperCase()))
+                .subType(nodeDto.subType())
+                .positionX(nodeDto.positionX())
+                .positionY(nodeDto.positionY())
+                .config(nodeDto.config())
+                .clientId(nodeDto.id())
+                .build())
             .toList();
+
+        draftVersion.getNodes().addAll(nodes);
+        entityManager.flush();
+
+        Map<String, String> clientIdToUuid = new LinkedHashMap<>();
+        for (Node node : draftVersion.getNodes()) {
+            if (node.getClientId() != null) {
+                clientIdToUuid.put(node.getClientId(), node.getId());
+            }
+        }
 
         List<Edge> edges = request
             .edges()
             .stream()
-            .map(edgeDto ->
-                Edge.builder()
-                    .id(edgeDto.id() != null ? edgeDto.id() : UUID.randomUUID().toString())
+            .filter(edgeDto -> clientIdToUuid.containsKey(edgeDto.sourceNodeId()) && clientIdToUuid.containsKey(edgeDto.targetNodeId()))
+            .map(edgeDto -> Edge.builder()
                     .workflowVersionId(draftVersion.getId())
-                    .sourceNodeId(edgeDto.sourceNodeId())
-                    .targetNodeId(edgeDto.targetNodeId())
+                    .sourceNodeId(clientIdToUuid.get(edgeDto.sourceNodeId()))
+                    .targetNodeId(clientIdToUuid.get(edgeDto.targetNodeId()))
                     .label(edgeDto.label())
-                    .build()
-            )
+                    .build())
             .toList();
 
-        nodeRepository.saveAll(nodes);
-        edgeRepository.saveAll(edges);
+        draftVersion.getEdges().addAll(edges);
 
-        draftVersion.setNodes(nodes);
-        draftVersion.setEdges(edges);
         return draftVersion;
     }
 
