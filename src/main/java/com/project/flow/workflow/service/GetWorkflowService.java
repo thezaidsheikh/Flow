@@ -12,6 +12,8 @@ import com.project.flow.workflow.repository.WorkflowRepository;
 import com.project.flow.workflow.repository.WorkflowVersionRepository;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -32,6 +34,11 @@ public class GetWorkflowService {
     @Transactional(readOnly = true)
     public List<Workflow> getAllByUserId(String userId) {
         return workflowRepository.findByUserId(userId);
+    }
+
+    @Transactional(readOnly = true)
+    public Page<Workflow> getPageByUserId(String userId, Pageable pageable) {
+        return workflowRepository.findByUserId(userId, pageable);
     }
 
     @Transactional(readOnly = true)
@@ -56,7 +63,7 @@ public class GetWorkflowService {
 
     @Transactional(readOnly = true)
     public WorkflowVersion getLatestVersionForSummary(String workflowId) {
-        return workflowVersionRepository.findFirstByWorkflowIdOrderByVersionNumberDesc(workflowId).map(this::loadGraph).orElse(null);
+        return workflowVersionRepository.findFirstByWorkflowIdOrderByVersionNumberDesc(workflowId).orElse(null);
     }
 
     public WorkflowVersion loadGraph(WorkflowVersion version) {
