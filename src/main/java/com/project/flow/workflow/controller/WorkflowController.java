@@ -2,6 +2,7 @@ package com.project.flow.workflow.controller;
 
 import com.project.flow.common.response.ApiResponse;
 import com.project.flow.common.security.CurrentUserProvider;
+import com.project.flow.workflow.domain.Node;
 import com.project.flow.workflow.domain.Workflow;
 import com.project.flow.workflow.domain.WorkflowVersion;
 import com.project.flow.workflow.dto.request.CreateWorkflowRequest;
@@ -10,11 +11,14 @@ import com.project.flow.workflow.dto.response.EdgeResponse;
 import com.project.flow.workflow.dto.response.NodeResponse;
 import com.project.flow.workflow.dto.response.WorkflowDetailResponse;
 import com.project.flow.workflow.dto.response.WorkflowResponse;
+import com.project.flow.workflow.enums.NodeType;
 import com.project.flow.workflow.service.CreateWorkflowService;
 import com.project.flow.workflow.service.GetWorkflowService;
 import com.project.flow.workflow.service.PublishWorkflowService;
 import com.project.flow.workflow.service.SaveDraftService;
+import com.project.flow.workflow.webhook.repository.WebhookRegistrationRepository;
 import jakarta.validation.Valid;
+import jakarta.servlet.http.HttpServletRequest;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
@@ -35,6 +39,8 @@ public class WorkflowController {
     private final PublishWorkflowService publishWorkflowService;
     private final GetWorkflowService getWorkflowService;
     private final CurrentUserProvider currentUserProvider;
+    private final WebhookRegistrationRepository webhookRegistrationRepository;
+    private final HttpServletRequest httpServletRequest;
 
     @PostMapping
     public ApiResponse<WorkflowResponse> createWorkflow(@Valid @RequestBody CreateWorkflowRequest request) {
@@ -94,7 +100,31 @@ public class WorkflowController {
         return new WorkflowResponse(workflow.getId(), workflow.getName(), workflow.getDescription(), status, versionNumber, workflow.getCreatedAt(), workflow.getUpdatedAt());
     }
 
+    private String buildWebhookUrl(Node node, String workflowId) {
+        if (node.getType() != NodeType.TRIGGER) return null;
+        String subType = node.getSubType();
+        if (subType == null) return null;
+        if (!"WEBHOOK".equalsIgnoreCase(subType) && !"GITHUB_PUSH".equalsIgnoreCase(subType)) return null;
+
+        List<com.project.flow.workflow.webhook.domain.WebhookRegistration> registrations =
+            webhookRegistrationRepository.findByWorkflowId(workflowId);
+
+        return registrations.stream()
+            .filter(r -> node.getId().equals(r.getNodeId()) && Boolean.TRUE.equals(r.getActive()))
+            .findFirst()
+            .map(r -> {
+                String baseUrl = httpServletRequest.getScheme() + "://" + httpServletRequest.getServerName();
+                if (httpServletRequest.getServerPort() != 80 && httpServletRequest.getServerPort() != 443) {
+                    baseUrl += ":" + httpServletRequest.getServerPort();
+                }
+                return baseUrl + "/api/v1/hooks/" + r.getPath();
+            })
+            .orElse(null);
+    }
+
     private WorkflowDetailResponse toDetailResponse(Workflow workflow, WorkflowVersion version) {
+        boolean isPublished = "PUBLISHED".equals(version.getStatus().name());
+
         return new WorkflowDetailResponse(
             workflow.getId(),
             workflow.getName(),
@@ -106,7 +136,13 @@ public class WorkflowController {
             version
                 .getNodes()
                 .stream()
-                .map(node -> new NodeResponse(node.getId(), node.getClientId(), node.getName(), node.getType().name(), node.getSubType(), node.getPositionX(), node.getPositionY(), node.getConfig()))
+                .map(node -> {
+                    String webhookUrl = null;
+                    if (isPublished) {
+                        webhookUrl = buildWebhookUrl(node, workflow.getId());
+                    }
+                    return new NodeResponse(node.getId(), node.getClientId(), node.getName(), node.getType().name(), node.getSubType(), node.getPositionX(), node.getPositionY(), node.getConfig(), webhookUrl);
+                })
                 .toList(),
             version
                 .getEdges()

@@ -7,6 +7,7 @@ import com.project.flow.workflow.enums.VersionStatus;
 import com.project.flow.workflow.repository.WorkflowRepository;
 import com.project.flow.workflow.repository.WorkflowVersionRepository;
 import com.project.flow.workflow.validator.GraphValidator;
+import com.project.flow.workflow.webhook.service.WebhookRegistrationService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -19,6 +20,7 @@ public class PublishWorkflowService {
     private final WorkflowVersionRepository workflowVersionRepository;
     private final GraphValidator graphValidator;
     private final GetWorkflowService getWorkflowService;
+    private final WebhookRegistrationService webhookRegistrationService;
 
     @Transactional
     public WorkflowVersion execute(String workflowId, String userId) {
@@ -38,6 +40,10 @@ public class PublishWorkflowService {
         }
 
         draftVersion.setStatus(VersionStatus.PUBLISHED);
-        return workflowVersionRepository.save(draftVersion);
+        WorkflowVersion saved = workflowVersionRepository.save(draftVersion);
+
+        webhookRegistrationService.registerWebhooks(workflowId, saved);
+
+        return saved;
     }
 }

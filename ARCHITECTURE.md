@@ -37,6 +37,7 @@ The application exposes a REST API and stores state in PostgreSQL.
 - Draft graph persistence
 - Publish validation
 - Workflow read APIs
+- Webhook trigger registration and lifecycle
 
 ### `execution`
 
@@ -88,6 +89,7 @@ The application exposes a REST API and stores state in PostgreSQL.
 - `credentials`
 - `workflow_runs`
 - `node_run_logs`
+- `webhook_registrations`
 
 ### Modeling choices
 
@@ -98,15 +100,30 @@ The application exposes a REST API and stores state in PostgreSQL.
 
 ## Execution flow
 
-Current execution is manual and synchronous.
+Execution supports two trigger paths: manual and webhook.
+
+### Manual execution
 
 ```text
-POST /workflows/{id}/run
+POST /workflows/{id}/run (JWT required)
 -> load latest published version
--> create workflow_run row
+-> create workflow_run row (trigger_type=MANUAL)
 -> execute nodes in-process
 -> create node_run_logs per node
 -> mark workflow_run completed or failed
+```
+
+### Webhook execution
+
+```text
+POST /hooks/{path} (no JWT, HMAC validated)
+-> look up webhook_registrations by path
+-> verify HMAC-SHA256 signature if secret is configured
+-> parse request body as trigger data
+-> load published workflow version
+-> create workflow_run row (trigger_type=WEBHOOK, userId=system)
+-> execute nodes in-process
+-> return 202 Accepted with run details
 ```
 
 ## Graph rules
@@ -114,7 +131,8 @@ POST /workflows/{id}/run
 Current publish and runtime rules:
 
 - at least one node is required
-- exactly one trigger node is supported for manual execution
+- exactly one trigger node is supported per workflow
+- trigger nodes support `sub_type` values: `WEBHOOK` (registers a webhook URL on publish)
 - edges must point to existing nodes
 - only condition nodes may have multiple outgoing edges
 
@@ -124,6 +142,7 @@ Current publish and runtime rules:
 
 - Starts the execution
 - Emits the incoming `triggerData` payload
+- For webhook triggers, the payload is the raw JSON from the external service
 
 ### Condition
 
@@ -183,7 +202,7 @@ Current productionized action support is limited to GitHub pull-request creation
 
 ## Design tradeoffs in the current MVP
 
-- Manual execution is synchronous to keep the current codepath debuggable and small
+- Manual and webhook execution are synchronous to keep the current codepath debuggable and small
 - Delay nodes are rejected rather than silently ignored
 - Workflow listing uses simple service composition instead of projection-heavy repository code
 - Connector execution is provider-driven and intentionally narrow until more actions exist
@@ -193,9 +212,8 @@ Current productionized action support is limited to GitHub pull-request creation
 These are not implemented yet:
 
 - background workers
-- scheduled and webhook triggers
+- scheduled triggers
 - delay resume scheduling
 - richer action-node catalog
 - Flyway or Liquibase migrations
-- OpenAPI generation
 - run retries and backoff policies

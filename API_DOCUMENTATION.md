@@ -18,9 +18,10 @@
    - [Auth](#1-auth)
    - [Workflows](#2-workflows)
    - [Runs](#3-runs)
-   - [Connectors](#4-connectors)
-   - [Credentials](#5-credentials)
-   - [Actuator](#6-actuator)
+   - [Webhooks](#4-webhooks)
+   - [Connectors](#5-connectors)
+   - [Credentials](#6-credentials)
+   - [Actuator](#7-actuator)
 6. [Enums Reference](#enums-reference)
 
 ---
@@ -31,7 +32,8 @@ Flow is a workflow automation platform. This API enables you to:
 
 - Register and authenticate users
 - Create, edit, and publish visual workflows
-- Execute workflows and monitor their runs
+- Execute workflows manually or via webhook triggers from external services
+- Monitor workflow runs with node-level execution logs
 - Manage connector integrations (e.g., GitHub, Slack)
 - Store and encrypt credentials for external services
 
@@ -73,6 +75,7 @@ Token Expired?  -->  POST /auth/refresh with refresh_token  -->  New tokens
 | `POST /auth/register` |
 | `POST /auth/login` |
 | `POST /auth/refresh` |
+| `POST /api/v1/hooks/{path}` |
 | `GET /actuator/health` |
 | `GET /actuator/info` |
 
@@ -647,7 +650,7 @@ PUT /api/v1/workflows/{id}/draft
 
 #### 2.5 Publish Workflow
 
-Publish the current draft. This creates a new published version that can be executed.
+Publish the current draft. This creates a new published version that can be executed. If the workflow contains a trigger node with `sub_type: "WEBHOOK"`, a webhook URL is automatically registered and active.
 
 ```
 POST /api/v1/workflows/{id}/publish
@@ -943,9 +946,130 @@ GET /api/v1/runs/{runId}/logs
 
 ---
 
-### 4. Connectors
+### 4. Webhooks
 
-#### 4.1 List All Connectors
+Webhook triggers allow external services (GitHub, Stripe, Slack, etc.) to trigger workflow executions by sending HTTP requests. When a workflow with a webhook trigger node is published, a unique webhook URL is automatically generated.
+
+#### How Webhook Triggers Work
+
+1. **Create a workflow** with a trigger node where `sub_type` is `WEBHOOK` and `config` contains a `secret` (optional, for HMAC validation).
+2. **Publish the workflow** -- the system generates a unique webhook URL.
+3. **Configure the external service** to send POST requests to the webhook URL.
+4. **The webhook payload** becomes available in the workflow as `${trigger.*}` template variables.
+
+#### Webhook Trigger Node Configuration
+
+When saving a draft, use this structure for the trigger node:
+
+```json
+{
+  "name": "GitHub Webhook",
+  "type": "TRIGGER",
+  "sub_type": "WEBHOOK",
+  "config": {
+    "secret": "your-shared-hmac-secret"
+  }
+}
+```
+
+| Config Field | Type | Required | Description |
+|---|---|---|---|
+| `secret` | string | No | Shared secret for HMAC-SHA256 signature validation. If set, incoming requests must include a valid `X-Hub-Signature-256` header. |
+
+> **Note:** The webhook URL is generated server-side using `SHA-256(workflowId:nodeId)` and does not need to be specified by the user.
+
+#### 4.1 Receive Webhook
+
+Receive an incoming webhook from an external service and trigger the associated workflow.
+
+```
+POST /api/v1/hooks/{path}
+```
+
+**Authentication:** Not required (HMAC signature validated instead)
+
+**Path Variables:**
+
+| Name | Type | Description |
+|---|---|---|
+| `path` | string | The 24-character hex path assigned when the webhook was registered (visible in server logs after publish) |
+
+**Request Headers:**
+
+| Header | Required | Description |
+|---|---|---|
+| `Content-Type` | Yes | `application/json` |
+| `X-Hub-Signature-256` | Conditional | HMAC-SHA256 signature if `secret` is configured in the trigger node. Format: hex-encoded HMAC of the raw request body. |
+
+**Request Body:**
+
+The raw JSON payload from the external service. The entire payload becomes available as `trigger.*` template variables in downstream nodes.
+
+**Request Example (GitHub PR event):**
+
+```json
+{
+  "action": "opened",
+  "pull_request": {
+    "title": "Fix login bug",
+    "user": { "login": "octocat" },
+    "html_url": "https://github.com/octocat/Hello-World/pull/1347"
+  }
+}
+```
+
+**Response:** `202 Accepted`
+
+```json
+{
+  "success": true,
+  "statusCode": 202,
+  "message": "Webhook received and workflow executed",
+  "data": {
+    "id": "run-uuid-here",
+    "workflow_id": "wf-uuid-here",
+    "workflow_version_id": "wv-uuid-here",
+    "status": "COMPLETED",
+    "trigger_type": "WEBHOOK",
+    "started_at": "2026-07-12T11:33:21.548+05:30",
+    "finished_at": "2026-07-12T11:33:26.789+05:30",
+    "input_payload": {
+      "triggerData": {
+        "action": "opened",
+        "pull_request": { "title": "Fix login bug" }
+      },
+      "variables": {},
+      "previousNodeOutput": {}
+    },
+    "output_payload": {
+      "triggerData": { "..." : "..." },
+      "variables": {},
+      "previousNodeOutput": { "..." : "..." }
+    },
+    "error_message": null
+  },
+  "meta": null,
+  "timestamp": "2026-07-12T11:33:26.789+05:30",
+  "path": "/api/v1/hooks/a1b2c3d4e5f6a7b8c9d0e1f2",
+  "requestId": "req-uuid-here"
+}
+```
+
+**Error Responses:**
+
+| Status | Error | When |
+|---|---|---|
+| `404` | `Webhook not found or inactive` | Path does not match any active webhook registration |
+| `400` | `Missing webhook signature` | Secret is configured but request has no `X-Hub-Signature-256` header |
+| `400` | `Invalid webhook signature` | HMAC signature does not match |
+
+> **Note:** The webhook response uses HTTP `202 Accepted` (not `200 OK`) to indicate the request was received and the workflow was triggered. The workflow execution result is included synchronously in the response body.
+
+---
+
+### 5. Connectors
+
+#### 5.1 List All Connectors
 
 Get all available connector integrations.
 
@@ -1029,7 +1153,7 @@ GET /api/v1/connectors
 
 ---
 
-#### 4.2 Get Connector Detail
+#### 5.2 Get Connector Detail
 
 Get a specific connector's definition and available actions.
 
@@ -1051,7 +1175,7 @@ GET /api/v1/connectors/{provider}
 
 ---
 
-#### 4.3 Execute Connector Action
+#### 5.3 Execute Connector Action
 
 Execute an action on a connector.
 
@@ -1111,11 +1235,11 @@ POST /api/v1/connectors/{provider}/actions/{action}/execute
 
 ---
 
-### 5. Credentials
+### 6. Credentials
 
 Credentials store encrypted secrets for external service integrations. Secret values are **never** returned in API responses -- only the key names are returned.
 
-#### 5.1 Create Credential
+#### 6.1 Create Credential
 
 Store a new credential with encrypted secrets.
 
@@ -1171,7 +1295,7 @@ POST /api/v1/credentials
 
 ---
 
-#### 5.2 List All Credentials
+#### 6.2 List All Credentials
 
 Get all credentials for the authenticated user.
 
@@ -1217,7 +1341,7 @@ GET /api/v1/credentials
 
 ---
 
-#### 5.3 Delete Credential
+#### 6.3 Delete Credential
 
 Permanently delete a credential.
 
@@ -1252,9 +1376,9 @@ DELETE /api/v1/credentials/{id}
 
 ---
 
-### 6. Actuator
+### 7. Actuator
 
-#### 6.1 Health Check
+#### 7.1 Health Check
 
 Check if the server is running and connected to its dependencies.
 
@@ -1275,7 +1399,7 @@ GET /api/v1/actuator/health
 
 ---
 
-#### 6.2 Info
+#### 7.2 Info
 
 Get application info.
 
@@ -1322,6 +1446,13 @@ GET /api/v1/actuator/info
 | `COMPLETED` | Execution finished successfully |
 | `FAILED` | Execution failed (see `error_message` for details) |
 
+### Trigger Type
+
+| Value | Description |
+|---|---|
+| `MANUAL` | Triggered via `POST /workflows/{id}/run` with JWT authentication |
+| `WEBHOOK` | Triggered via `POST /hooks/{path}` from an external service |
+
 ### User Status
 
 | Value | Description |
@@ -1347,14 +1478,15 @@ GET /api/v1/actuator/info
 | 11 | `GET` | `/api/v1/workflows/{id}/runs` | Yes | -- | `WorkflowRunPageResponse` |
 | 12 | `GET` | `/api/v1/runs/{runId}` | Yes | -- | `WorkflowRunDetailResponse` |
 | 13 | `GET` | `/api/v1/runs/{runId}/logs` | Yes | -- | `List<NodeRunLogResponse>` |
-| 14 | `GET` | `/api/v1/connectors` | Yes | -- | `List<ConnectorDefinition>` |
-| 15 | `GET` | `/api/v1/connectors/{provider}` | Yes | -- | `ConnectorDefinition` |
-| 16 | `POST` | `/api/v1/connectors/{provider}/actions/{action}/execute` | Yes | `ExecuteConnectorActionRequest` | `Map<String, Object>` |
-| 17 | `POST` | `/api/v1/credentials` | Yes | `CreateCredentialRequest` | `CredentialResponse` |
-| 18 | `GET` | `/api/v1/credentials` | Yes | -- | `List<CredentialResponse>` |
-| 19 | `DELETE` | `/api/v1/credentials/{id}` | Yes | -- | `Void` |
-| 20 | `GET` | `/api/v1/actuator/health` | No | -- | Health status |
-| 21 | `GET` | `/api/v1/actuator/info` | No | -- | App info |
+| 14 | `POST` | `/api/v1/hooks/{path}` | No | Raw JSON body | `WorkflowRunDetailResponse` |
+| 15 | `GET` | `/api/v1/connectors` | Yes | -- | `List<ConnectorDefinition>` |
+| 16 | `GET` | `/api/v1/connectors/{provider}` | Yes | -- | `ConnectorDefinition` |
+| 17 | `POST` | `/api/v1/connectors/{provider}/actions/{action}/execute` | Yes | `ExecuteConnectorActionRequest` | `Map<String, Object>` |
+| 18 | `POST` | `/api/v1/credentials` | Yes | `CreateCredentialRequest` | `CredentialResponse` |
+| 19 | `GET` | `/api/v1/credentials` | Yes | -- | `List<CredentialResponse>` |
+| 20 | `DELETE` | `/api/v1/credentials/{id}` | Yes | -- | `Void` |
+| 21 | `GET` | `/api/v1/actuator/health` | No | -- | Health status |
+| 22 | `GET` | `/api/v1/actuator/info` | No | -- | App info |
 
 ---
 

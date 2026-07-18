@@ -36,6 +36,11 @@ public class WorkflowExecutionOrchestrator {
 
     @Transactional
     public WorkflowRun execute(String workflowId, WorkflowVersion version, String userId, Map<String, Object> triggerData, Map<String, Object> variables) {
+        return execute(workflowId, version, userId, triggerData, variables, "MANUAL");
+    }
+
+    @Transactional
+    public WorkflowRun execute(String workflowId, WorkflowVersion version, String userId, Map<String, Object> triggerData, Map<String, Object> variables, String triggerType) {
         WorkflowExecutionContext context = new WorkflowExecutionContext(triggerData, variables);
         WorkflowRun run = workflowRunRepository.save(
             WorkflowRun.builder()
@@ -43,7 +48,7 @@ public class WorkflowExecutionOrchestrator {
                 .workflowVersionId(version.getId())
                 .userId(userId)
                 .status(WorkflowRunStatus.RUNNING)
-                .triggerType("MANUAL")
+                .triggerType(triggerType)
                 .startedAt(OffsetDateTime.now())
                 .inputPayload(context.snapshot())
                 .build()

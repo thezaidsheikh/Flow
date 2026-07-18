@@ -12,5 +12,6 @@ public record NodeResponse(
     String subType,
     Integer positionX,
     Integer positionY,
-    Object config
+    Object config,
+    String webhookUrl
 ) {}
