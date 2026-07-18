@@ -78,6 +78,7 @@ public class SaveDraftService {
             .toList();
 
         draftVersion.getEdges().addAll(edges);
+        entityManager.flush();
 
         return draftVersion;
     }

@@ -17,6 +17,10 @@ public class GlobalResponseHandler implements ResponseBodyAdvice<Object> {
 
     private static final int HTTP_OK = 200;
     private static final int HTTP_CREATED = 201;
+    private static final String[] EXCLUDED_PATHS = {
+        "/v3/api-docs",
+        "/swagger-ui"
+    };
 
     private final HttpServletRequest request;
     private final RequestContextUtil requestContextUtil;
@@ -29,7 +33,19 @@ public class GlobalResponseHandler implements ResponseBodyAdvice<Object> {
         }
 
         // Skip if annotation present
-        return (!returnType.hasMethodAnnotation(NoWrapResponse.class) && !returnType.getContainingClass().isAnnotationPresent(NoWrapResponse.class));
+        if (returnType.hasMethodAnnotation(NoWrapResponse.class) || returnType.getContainingClass().isAnnotationPresent(NoWrapResponse.class)) {
+            return false;
+        }
+
+        // Skip springdoc/swagger paths
+        String path = request.getRequestURI();
+        for (String excluded : EXCLUDED_PATHS) {
+            if (path != null && path.contains(excluded)) {
+                return false;
+            }
+        }
+
+        return true;
     }
 
     @Override
