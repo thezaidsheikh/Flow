@@ -15,5 +15,6 @@ public record WorkflowDetailResponse(
     OffsetDateTime createdAt,
     OffsetDateTime updatedAt,
     List<NodeResponse> nodes,
-    List<EdgeResponse> edges
+    List<EdgeResponse> edges,
+    String webhookUrl
 ) {}

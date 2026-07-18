@@ -430,7 +430,8 @@ GET /api/v1/workflows
       "status": "DRAFT",
       "version_number": 1,
       "created_at": "2026-07-12T10:00:00.000+05:30",
-      "updated_at": "2026-07-12T11:00:00.000+05:30"
+      "updated_at": "2026-07-12T11:00:00.000+05:30",
+      "webhook_url": null
     },
     {
       "id": "wf-uuid-2",
@@ -439,7 +440,8 @@ GET /api/v1/workflows
       "status": "PUBLISHED",
       "version_number": 3,
       "created_at": "2026-07-10T09:00:00.000+05:30",
-      "updated_at": "2026-07-12T08:00:00.000+05:30"
+      "updated_at": "2026-07-12T08:00:00.000+05:30",
+      "webhook_url": "http://localhost:3002/api/v1/hooks/a1b2c3d4e5f6a7b8c9d0e1f2"
     }
   ],
   "meta": null,
@@ -487,6 +489,7 @@ GET /api/v1/workflows/{id}
     "nodes": [
       {
         "id": "node-uuid-1",
+        "client_id": "trigger-node",
         "name": "Trigger",
         "type": "TRIGGER",
         "sub_type": "WEBHOOK",
@@ -495,10 +498,12 @@ GET /api/v1/workflows/{id}
         "config": {
           "path": "/webhook/onboard",
           "method": "POST"
-        }
+        },
+        "webhook_url": null
       },
       {
         "id": "node-uuid-2",
+        "client_id": "action-node",
         "name": "Send Welcome Email",
         "type": "ACTION",
         "sub_type": "EMAIL",
@@ -508,7 +513,8 @@ GET /api/v1/workflows/{id}
           "to": "{{trigger.email}}",
           "subject": "Welcome!",
           "body": "Hi {{trigger.first_name}}, welcome to our platform!"
-        }
+        },
+        "webhook_url": null
       }
     ],
     "edges": [
@@ -518,7 +524,8 @@ GET /api/v1/workflows/{id}
         "target_node_id": "node-uuid-2",
         "label": "success"
       }
-    ]
+    ],
+    "webhook_url": null
   },
   "meta": null,
   "timestamp": "2026-07-12T11:33:21.548+05:30",
@@ -648,7 +655,41 @@ PUT /api/v1/workflows/{id}/draft
 
 ---
 
-#### 2.5 Publish Workflow
+#### 2.5 Rename Workflow
+
+Update the name of an existing workflow.
+
+```
+PATCH /api/v1/workflows/{id}/name
+```
+
+**Authentication:** Required
+
+**Path Variables:**
+
+| Name | Type | Description |
+|---|---|---|
+| `id` | string | Workflow ID |
+
+**Request Body:**
+
+| Field | Type | Required | Validation | Description |
+|---|---|---|---|---|
+| `name` | string | Yes | Must not be blank | New workflow name |
+
+**Request Example:**
+
+```json
+{
+  "name": "Updated Workflow Name"
+}
+```
+
+**Response:** `200 OK` (Same structure as List Workflows item)
+
+---
+
+#### 2.6 Publish Workflow
 
 Publish the current draft. This creates a new published version that can be executed. If the workflow contains a trigger node with `sub_type: "WEBHOOK"`, a webhook URL is automatically registered and active.
 
@@ -667,6 +708,43 @@ POST /api/v1/workflows/{id}/publish
 **Request Body:** None
 
 **Response:** `200 OK` (Same structure as Get Workflow Detail, with `status: "PUBLISHED"`)
+
+---
+
+#### 2.7 Delete Workflow
+
+Permanently delete a workflow and all its versions, nodes, edges, webhook registrations, runs, and run logs.
+
+```
+DELETE /api/v1/workflows/{id}
+```
+
+**Authentication:** Required
+
+**Path Variables:**
+
+| Name | Type | Description |
+|---|---|---|
+| `id` | string | Workflow ID |
+
+**Request Body:** None
+
+**Response:** `200 OK`
+
+```json
+{
+  "success": true,
+  "statusCode": 200,
+  "message": "Workflow deleted successfully",
+  "data": null,
+  "meta": null,
+  "timestamp": "2026-07-12T11:33:21.548+05:30",
+  "path": "/api/v1/workflows/wf-uuid-here",
+  "requestId": "req-uuid-here"
+}
+```
+
+> **Note:** This operation is irreversible. All associated data (versions, nodes, edges, webhook registrations, runs, and run logs) is permanently deleted.
 
 ---
 
@@ -1473,20 +1551,22 @@ GET /api/v1/actuator/info
 | 6 | `GET` | `/api/v1/workflows` | Yes | -- | `List<WorkflowResponse>` |
 | 7 | `GET` | `/api/v1/workflows/{id}` | Yes | -- | `WorkflowDetailResponse` |
 | 8 | `PUT` | `/api/v1/workflows/{id}/draft` | Yes | `SaveDraftRequest` | `WorkflowDetailResponse` |
-| 9 | `POST` | `/api/v1/workflows/{id}/publish` | Yes | -- | `WorkflowDetailResponse` |
-| 10 | `POST` | `/api/v1/workflows/{id}/run` | Yes | `RunWorkflowRequest` (opt.) | `WorkflowRunDetailResponse` |
-| 11 | `GET` | `/api/v1/workflows/{id}/runs` | Yes | -- | `WorkflowRunPageResponse` |
-| 12 | `GET` | `/api/v1/runs/{runId}` | Yes | -- | `WorkflowRunDetailResponse` |
-| 13 | `GET` | `/api/v1/runs/{runId}/logs` | Yes | -- | `List<NodeRunLogResponse>` |
-| 14 | `POST` | `/api/v1/hooks/{path}` | No | Raw JSON body | `WorkflowRunDetailResponse` |
-| 15 | `GET` | `/api/v1/connectors` | Yes | -- | `List<ConnectorDefinition>` |
-| 16 | `GET` | `/api/v1/connectors/{provider}` | Yes | -- | `ConnectorDefinition` |
-| 17 | `POST` | `/api/v1/connectors/{provider}/actions/{action}/execute` | Yes | `ExecuteConnectorActionRequest` | `Map<String, Object>` |
-| 18 | `POST` | `/api/v1/credentials` | Yes | `CreateCredentialRequest` | `CredentialResponse` |
-| 19 | `GET` | `/api/v1/credentials` | Yes | -- | `List<CredentialResponse>` |
-| 20 | `DELETE` | `/api/v1/credentials/{id}` | Yes | -- | `Void` |
-| 21 | `GET` | `/api/v1/actuator/health` | No | -- | Health status |
-| 22 | `GET` | `/api/v1/actuator/info` | No | -- | App info |
+| 9 | `PATCH` | `/api/v1/workflows/{id}/name` | Yes | `{ "name": "..." }` | `WorkflowResponse` |
+| 10 | `POST` | `/api/v1/workflows/{id}/publish` | Yes | -- | `WorkflowDetailResponse` |
+| 11 | `DELETE` | `/api/v1/workflows/{id}` | Yes | -- | `Void` |
+| 12 | `POST` | `/api/v1/workflows/{id}/run` | Yes | `RunWorkflowRequest` (opt.) | `WorkflowRunDetailResponse` |
+| 13 | `GET` | `/api/v1/workflows/{id}/runs` | Yes | -- | `WorkflowRunPageResponse` |
+| 14 | `GET` | `/api/v1/runs/{runId}` | Yes | -- | `WorkflowRunDetailResponse` |
+| 15 | `GET` | `/api/v1/runs/{runId}/logs` | Yes | -- | `List<NodeRunLogResponse>` |
+| 16 | `POST` | `/api/v1/hooks/{path}` | No | Raw JSON body | `WorkflowRunDetailResponse` |
+| 17 | `GET` | `/api/v1/connectors` | Yes | -- | `List<ConnectorDefinition>` |
+| 18 | `GET` | `/api/v1/connectors/{provider}` | Yes | -- | `ConnectorDefinition` |
+| 19 | `POST` | `/api/v1/connectors/{provider}/actions/{action}/execute` | Yes | `ExecuteConnectorActionRequest` | `Map<String, Object>` |
+| 20 | `POST` | `/api/v1/credentials` | Yes | `CreateCredentialRequest` | `CredentialResponse` |
+| 21 | `GET` | `/api/v1/credentials` | Yes | -- | `List<CredentialResponse>` |
+| 22 | `DELETE` | `/api/v1/credentials/{id}` | Yes | -- | `Void` |
+| 23 | `GET` | `/api/v1/actuator/health` | No | -- | Health status |
+| 24 | `GET` | `/api/v1/actuator/info` | No | -- | App info |
 
 ---
 

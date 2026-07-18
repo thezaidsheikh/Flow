@@ -136,7 +136,9 @@ Create the application jar:
 - `GET /workflows`
 - `GET /workflows/{id}`
 - `PUT /workflows/{id}/draft`
+- `PATCH /workflows/{id}/name`
 - `POST /workflows/{id}/publish`
+- `DELETE /workflows/{id}`
 - `POST /workflows/{id}/run`
 
 ### Runs

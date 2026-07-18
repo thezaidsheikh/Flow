@@ -11,6 +11,9 @@ import com.project.flow.auth.service.LoginUserService;
 import com.project.flow.auth.service.RefreshAccessTokenService;
 import com.project.flow.auth.service.RegisterUserService;
 import com.project.flow.common.response.ApiResponse;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.responses.ApiResponses;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.AllArgsConstructor;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -22,6 +25,7 @@ import org.springframework.web.bind.annotation.RestController;
 @RestController
 @RequestMapping("/auth")
 @AllArgsConstructor
+@Tag(name = "Authentication", description = "User authentication and token management endpoints")
 public class AuthController {
 
     private final RegisterUserService registerUserService;
@@ -30,6 +34,12 @@ public class AuthController {
     private final GetCurrentUserService getCurrentUserService;
 
     @PostMapping("/register")
+    @Operation(summary = "Register a new user", description = "Create a new user account with email, password, and name.")
+    @ApiResponses({
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "201", description = "User registered successfully"),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "400", description = "Validation failed"),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "409", description = "Email already exists")
+    })
     public ApiResponse<UserResDto> registerUser(@Valid @RequestBody RegisterUserReqDto registerUserReqDto) {
         User user = registerUserService.register(registerUserReqDto);
         UserResDto response = new UserResDto(user.getId(), user.getFirstName() + " " + user.getLastName(), user.getEmail(), user.getStatus().name());
@@ -37,18 +47,33 @@ public class AuthController {
     }
 
     @PostMapping("/login")
+    @Operation(summary = "Login", description = "Authenticate with email and password to receive JWT access and refresh tokens.")
+    @ApiResponses({
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "Login successful"),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "401", description = "Invalid credentials")
+    })
     public ApiResponse<AuthResDto> loginUser(@Valid @RequestBody LoginReqDto payload) {
         AuthResDto response = loginUserService.login(payload);
         return ApiResponse.<AuthResDto>builder().success(true).statusCode(200).message("User logged in successfully").data(response).build();
     }
 
     @PostMapping("/refresh")
+    @Operation(summary = "Refresh access token", description = "Exchange a valid refresh token for new access and refresh tokens.")
+    @ApiResponses({
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "Token refreshed successfully"),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "401", description = "Invalid or expired refresh token")
+    })
     public ApiResponse<AuthResDto> refreshAccessToken(@Valid @RequestBody RefreshTokenReqDto payload) {
         AuthResDto response = refreshAccessTokenService.execute(payload);
         return ApiResponse.<AuthResDto>builder().success(true).statusCode(200).message("Access token refreshed successfully").data(response).build();
     }
 
     @GetMapping("/me")
+    @Operation(summary = "Get current user", description = "Retrieve the authenticated user's profile.")
+    @ApiResponses({
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "User retrieved successfully"),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "401", description = "Unauthorized")
+    })
     public ApiResponse<UserResDto> getCurrentUser() {
         UserResDto response = getCurrentUserService.execute();
         return ApiResponse.<UserResDto>builder().success(true).statusCode(200).message("Current user retrieved successfully").data(response).build();

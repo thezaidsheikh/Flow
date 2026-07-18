@@ -6,6 +6,10 @@ import com.project.flow.connector.dto.request.ExecuteConnectorActionRequest;
 import com.project.flow.connector.service.ExecuteConnectorActionService;
 import com.project.flow.connector.service.ListConnectorsService;
 import com.project.flow.common.security.CurrentUserProvider;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.responses.ApiResponses;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import java.util.List;
 import java.util.Map;
@@ -17,12 +21,10 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
-/**
- * Controller exposing REST API endpoints to read connector configurations.
- */
 @RestController
 @RequestMapping("/connectors")
 @RequiredArgsConstructor
+@Tag(name = "Connectors", description = "Discover available connectors and execute connector actions")
 public class ConnectorController {
 
     private final ListConnectorsService listConnectorsService;
@@ -30,6 +32,10 @@ public class ConnectorController {
     private final CurrentUserProvider currentUserProvider;
 
     @GetMapping
+    @Operation(summary = "List all connectors", description = "Get all available connector integrations with their supported actions and credential schemas.")
+    @ApiResponses({
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "Connectors retrieved successfully")
+    })
     public ApiResponse<List<ConnectorDefinition>> listConnectors() {
         List<ConnectorDefinition> response = listConnectorsService.execute();
         return ApiResponse.<List<ConnectorDefinition>>builder()
@@ -41,7 +47,14 @@ public class ConnectorController {
     }
 
     @GetMapping("/{provider}")
-    public ApiResponse<ConnectorDefinition> getConnector(@PathVariable String provider) {
+    @Operation(summary = "Get connector detail", description = "Get a specific connector's definition, available actions, and credential schema.")
+    @ApiResponses({
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "Connector retrieved successfully"),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "404", description = "Connector not found")
+    })
+    public ApiResponse<ConnectorDefinition> getConnector(
+        @Parameter(description = "Connector provider name (e.g. github, slack)") @PathVariable String provider
+    ) {
         ConnectorDefinition connector = listConnectorsService.execute().stream()
                 .filter(c -> c.provider().equalsIgnoreCase(provider))
                 .findFirst()
@@ -56,9 +69,15 @@ public class ConnectorController {
     }
 
     @PostMapping("/{provider}/actions/{action}/execute")
+    @Operation(summary = "Execute connector action", description = "Execute an action on a connector using stored credentials and action-specific inputs.")
+    @ApiResponses({
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "Connector action executed successfully"),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "404", description = "Connector or action not found"),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "400", description = "Validation failed")
+    })
     public ApiResponse<Map<String, Object>> executeConnectorAction(
-        @PathVariable String provider,
-        @PathVariable String action,
+        @Parameter(description = "Connector provider name") @PathVariable String provider,
+        @Parameter(description = "Action to execute (e.g. create_pull_request)") @PathVariable String action,
         @Valid @RequestBody ExecuteConnectorActionRequest request
     ) {
         String userId = currentUserProvider.getCurrentUserId();
