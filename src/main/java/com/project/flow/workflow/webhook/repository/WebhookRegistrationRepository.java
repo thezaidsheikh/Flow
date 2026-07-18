@@ -14,6 +14,8 @@ public interface WebhookRegistrationRepository extends JpaRepository<WebhookRegi
 
     List<WebhookRegistration> findByWorkflowId(String workflowId);
 
+    List<WebhookRegistration> findByUserId(String userId);
+
     @Modifying
     void deleteByWorkflowId(String workflowId);
 }

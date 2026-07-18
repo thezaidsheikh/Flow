@@ -42,7 +42,7 @@ public class PublishWorkflowService {
         draftVersion.setStatus(VersionStatus.PUBLISHED);
         WorkflowVersion saved = workflowVersionRepository.save(draftVersion);
 
-        webhookRegistrationService.registerWebhooks(workflowId, saved);
+        webhookRegistrationService.registerWebhooks(workflowId, userId, saved);
 
         return saved;
     }

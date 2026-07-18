@@ -33,7 +33,6 @@ import org.springframework.transaction.annotation.Transactional;
 public class WebhookRegistrationService {
 
     private static final String WEBHOOK_SECRET_KEY = "secret";
-    private static final String SYSTEM_USER_ID = "system";
     private static final String WEBHOOK_TRIGGER_SUBTYPE = "WEBHOOK";
     private static final String GITHUB_PUSH_TRIGGER_SUBTYPE = "GITHUB_PUSH";
 
@@ -42,7 +41,7 @@ public class WebhookRegistrationService {
     private final WorkflowExecutionOrchestrator orchestrator;
 
     @Transactional
-    public void registerWebhooks(String workflowId, WorkflowVersion version) {
+    public void registerWebhooks(String workflowId, String userId, WorkflowVersion version) {
         List<Node> webhookTriggerNodes = version.getNodes().stream()
             .filter(node -> node.getType() == NodeType.TRIGGER
                 && (WEBHOOK_TRIGGER_SUBTYPE.equalsIgnoreCase(node.getSubType())
@@ -65,6 +64,7 @@ public class WebhookRegistrationService {
 
             WebhookRegistration registration = WebhookRegistration.builder()
                 .path(path)
+                .userId(userId)
                 .workflowId(workflowId)
                 .workflowVersionId(version.getId())
                 .nodeId(triggerNode.getId())
@@ -73,7 +73,7 @@ public class WebhookRegistrationService {
                 .build();
 
             webhookRegistrationRepository.save(registration);
-            log.info("Registered webhook for workflow={}, path={}", workflowId, path);
+            log.info("Registered webhook for workflow={}, user={}, path={}", workflowId, userId, path);
         }
     }
 
@@ -103,7 +103,7 @@ public class WebhookRegistrationService {
         var run = orchestrator.execute(
             registration.getWorkflowId(),
             version,
-            SYSTEM_USER_ID,
+            registration.getUserId(),
             triggerData,
             Map.of(),
             "WEBHOOK"

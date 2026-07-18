@@ -19,7 +19,8 @@ import lombok.Setter;
     name = "webhook_registrations",
     indexes = {
         @Index(name = "idx_webhook_registrations_path", columnList = "path"),
-        @Index(name = "idx_webhook_registrations_workflow_id", columnList = "workflow_id")
+        @Index(name = "idx_webhook_registrations_workflow_id", columnList = "workflow_id"),
+        @Index(name = "idx_webhook_registrations_user_id", columnList = "user_id")
     }
 )
 @Builder
@@ -35,6 +36,9 @@ public class WebhookRegistration extends BaseEntity {
 
     @Column(nullable = false, unique = true, length = 100)
     private String path;
+
+    @Column(name = "user_id")
+    private String userId;
 
     @Column(name = "workflow_id", nullable = false)
     private String workflowId;
