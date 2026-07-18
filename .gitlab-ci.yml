@@ -1,0 +1,20 @@
+stages:
+  - build
+
+build_and_test:
+  stage: build
+  image: eclipse-temurin:21-jdk
+  variables:
+    GRADLE_USER_HOME: "$CI_PROJECT_DIR/.gradle-ci"
+  cache:
+    key: gradle-cache
+    paths:
+      - .gradle-ci/caches
+      - .gradle-ci/wrapper
+  script:
+    - chmod +x ./gradlew
+    - ./gradlew build --no-daemon --stacktrace
+  artifacts:
+    when: always
+    reports:
+      junit: build/test-results/test/*.xml

@@ -39,3 +39,12 @@ out/
 
 .env
 .env.*
+
+### macOS ###
+.DS_Store
+
+### Local Gradle caches ###
+.gradle-local/
+
+### Logs ###
+*.log

@@ -17,12 +17,18 @@ import com.project.flow.workflow.service.SaveDraftService;
 import jakarta.validation.Valid;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
 @RequestMapping("/workflows")
 @RequiredArgsConstructor
 public class WorkflowController {
+
+    private static final int MAX_PAGE_SIZE = 100;
 
     private final CreateWorkflowService createWorkflowService;
     private final SaveDraftService saveDraftService;
@@ -39,10 +45,18 @@ public class WorkflowController {
     }
 
     @GetMapping
-    public ApiResponse<List<WorkflowResponse>> getWorkflows() {
+    public ApiResponse<List<WorkflowResponse>> getWorkflows(
+        @RequestParam(defaultValue = "0") int page,
+        @RequestParam(defaultValue = "20") int size
+    ) {
         String userId = currentUserProvider.getCurrentUserId();
-        List<Workflow> workflows = getWorkflowService.getAllByUserId(userId);
-        List<WorkflowResponse> response = workflows.stream().map(workflow -> toResponse(workflow, getWorkflowService.getLatestVersionForSummary(workflow.getId()))).toList();
+        Pageable pageable = PageRequest.of(Math.max(page, 0), clampPageSize(size), Sort.by(Sort.Direction.DESC, "updatedAt"));
+        Page<Workflow> workflows = getWorkflowService.getPageByUserId(userId, pageable);
+        List<WorkflowResponse> response = workflows
+            .getContent()
+            .stream()
+            .map(workflow -> toResponse(workflow, getWorkflowService.getLatestVersionForSummary(workflow.getId())))
+            .toList();
         return ApiResponse.<List<WorkflowResponse>>builder().success(true).statusCode(200).message("Workflows retrieved successfully").data(response).build();
     }
 
@@ -68,6 +82,10 @@ public class WorkflowController {
         Workflow workflow = getWorkflowService.getById(id, userId);
         WorkflowVersion version = publishWorkflowService.execute(id, userId);
         return ApiResponse.<WorkflowDetailResponse>builder().success(true).statusCode(200).message("Workflow published successfully").data(toDetailResponse(workflow, version)).build();
+    }
+
+    private int clampPageSize(int size) {
+        return Math.min(Math.max(size, 1), MAX_PAGE_SIZE);
     }
 
     private WorkflowResponse toResponse(Workflow workflow, WorkflowVersion latestVersion) {
