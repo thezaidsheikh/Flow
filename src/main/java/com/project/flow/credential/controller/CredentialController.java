@@ -7,17 +7,19 @@ import com.project.flow.credential.service.CreateCredentialService;
 import com.project.flow.credential.service.DeleteCredentialService;
 import com.project.flow.credential.service.ListCredentialsService;
 import com.project.flow.common.security.CurrentUserProvider;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.responses.ApiResponses;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
 
-/**
- * Controller exposing REST API endpoints for user credential management.
- */
 @RestController
 @RequestMapping("/credentials")
 @RequiredArgsConstructor
+@Tag(name = "Credentials", description = "Manage encrypted credentials for external integrations")
 public class CredentialController {
 
     private final CreateCredentialService createCredentialService;
@@ -26,6 +28,11 @@ public class CredentialController {
     private final CurrentUserProvider currentUserProvider;
 
     @PostMapping
+    @Operation(summary = "Create credential", description = "Store a new credential with encrypted secrets. Secret values are AES-256-GCM encrypted at rest and never returned in responses.")
+    @ApiResponses({
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "Credential created successfully"),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "400", description = "Validation failed")
+    })
     public ApiResponse<CredentialResponse> createCredential(@Valid @RequestBody CreateCredentialRequest request) {
         String userId = currentUserProvider.getCurrentUserId();
         CredentialResponse response = createCredentialService.execute(request, userId);
@@ -38,6 +45,10 @@ public class CredentialController {
     }
 
     @GetMapping
+    @Operation(summary = "List all credentials", description = "Get all credentials for the authenticated user. Only secret key names are returned, never the actual values.")
+    @ApiResponses({
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "Credentials retrieved successfully")
+    })
     public ApiResponse<List<CredentialResponse>> getCredentials() {
         String userId = currentUserProvider.getCurrentUserId();
         List<CredentialResponse> response = listCredentialsService.execute(userId);
@@ -50,7 +61,14 @@ public class CredentialController {
     }
 
     @DeleteMapping("/{id}")
-    public ApiResponse<Void> deleteCredential(@PathVariable String id) {
+    @Operation(summary = "Delete credential", description = "Permanently delete a credential and its encrypted secrets.")
+    @ApiResponses({
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "Credential deleted successfully"),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "404", description = "Credential not found")
+    })
+    public ApiResponse<Void> deleteCredential(
+        @Parameter(description = "Credential ID") @PathVariable String id
+    ) {
         String userId = currentUserProvider.getCurrentUserId();
         deleteCredentialService.execute(id, userId);
         return ApiResponse.<Void>builder()

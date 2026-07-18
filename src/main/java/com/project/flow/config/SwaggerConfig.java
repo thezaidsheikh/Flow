@@ -62,21 +62,26 @@ public class SwaggerConfig {
                 .version("v1.0.0")
                 .description("""
                         # Flow Workflow Automation Platform API
-                        
+
                         RESTful API for the Flow workflow automation platform. This API allows you to:
                         - **Authenticate** users and manage JWT tokens
-                        - **Manage Workflows** - Create, draft, publish, and retrieve workflows with visual graph editing
-                        - **Execute Workflows** - Run published workflows and track execution history
+                        - **Manage Workflows** - Create, draft, publish, rename, and delete workflows with visual graph editing
+                        - **Execute Workflows** - Run published workflows manually or via webhook triggers, and track execution history
+                        - **Webhook Triggers** - Receive external webhook requests (GitHub, Stripe, etc.) to trigger workflows automatically
                         - **Manage Credentials** - Securely store and manage encrypted credentials for integrations
                         - **Integrate Connectors** - Discover and execute actions from supported connectors
-                        
+
                         ## Authentication
-                        All endpoints (except `/auth/register`, `/auth/login`, `/auth/refresh`, and actuator endpoints) 
+                        All endpoints (except `/auth/register`, `/auth/login`, `/auth/refresh`, `/hooks/**`, and actuator endpoints)
                         require a valid JWT Bearer token in the Authorization header:
                         ```
                         Authorization: Bearer <your-jwt-token>
                         ```
-                        
+
+                        ## Webhook Triggers
+                        Workflows with a trigger node (`sub_type: "WEBHOOK"`) can be triggered externally via
+                        `POST /hooks/{path}`. Optional HMAC-SHA256 signature validation is supported.
+
                         ## Error Responses
                         All error responses follow a standard format:
                         ```json
@@ -89,7 +94,7 @@ public class SwaggerConfig {
                           }
                         }
                         ```
-                        
+
                         ## Pagination
                         List endpoints support pagination via `page` (0-based) and `size` query parameters.
                         """)
@@ -105,8 +110,9 @@ public class SwaggerConfig {
     private List<Tag> apiTags() {
         return List.of(
                 new Tag().name("Authentication").description("User authentication and token management endpoints"),
-                new Tag().name("Workflows").description("Workflow CRUD operations, draft management, and publishing"),
+                new Tag().name("Workflows").description("Workflow CRUD operations, draft management, publishing, renaming, and deletion"),
                 new Tag().name("Workflow Executions").description("Run workflows, list executions, view details and logs"),
+                new Tag().name("Webhooks").description("External webhook trigger endpoints for workflow automation (no auth required)"),
                 new Tag().name("Credentials").description("Manage encrypted credentials for external integrations"),
                 new Tag().name("Connectors").description("Discover available connectors and execute connector actions")
         );

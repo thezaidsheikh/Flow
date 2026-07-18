@@ -1,6 +1,6 @@
 # Flow
 
-Flow is a backend-first workflow automation platform built as a modular Spring Boot application. It currently supports user authentication, workflow drafting and publishing, encrypted credential storage, connector metadata, manual workflow execution, and run history with node-level logs.
+Flow is a backend-first workflow automation platform built as a modular Spring Boot application. It currently supports user authentication, workflow drafting and publishing, encrypted credential storage, connector metadata, manual and webhook-triggered workflow execution, and run history with node-level logs.
 
 ## Implemented MVP
 
@@ -9,6 +9,7 @@ Flow is a backend-first workflow automation platform built as a modular Spring B
 - Draft graph persistence with nodes and edges
 - Workflow publish flow with graph validation
 - Manual execution of published workflows
+- Webhook-triggered execution of published workflows (HMAC-SHA256 signature validation)
 - Run history and node execution logs
 - Encrypted credential storage
 - Connector catalog plus executable GitHub pull-request action
@@ -17,7 +18,7 @@ Flow is a backend-first workflow automation platform built as a modular Spring B
 
 Supported workflow node types:
 
-- `TRIGGER`: starts a manual run
+- `TRIGGER`: starts a run (manual or webhook-triggered)
 - `CONDITION`: evaluates a field from `trigger`, `variables`, or `previous`
 - `ACTION`: executes a connector action with resolved inputs
 - `DELAY`: storable in drafts, but not executable yet in the current synchronous runtime
@@ -135,7 +136,9 @@ Create the application jar:
 - `GET /workflows`
 - `GET /workflows/{id}`
 - `PUT /workflows/{id}/draft`
+- `PATCH /workflows/{id}/name`
 - `POST /workflows/{id}/publish`
+- `DELETE /workflows/{id}`
 - `POST /workflows/{id}/run`
 
 ### Runs
@@ -143,6 +146,10 @@ Create the application jar:
 - `GET /workflows/{id}/runs`
 - `GET /runs/{runId}`
 - `GET /runs/{runId}/logs`
+
+### Webhooks (No Auth Required)
+
+- `POST /hooks/{path}`
 
 ### Credentials
 
@@ -235,10 +242,9 @@ Available placeholder roots:
 
 ## Current limitations
 
-- No scheduler, webhook trigger, queue worker, or background execution yet
+- No scheduler, queue worker, or background execution yet
 - No Slack, email, or HTTP action nodes yet
 - No refresh-token revocation endpoint
-- No Swagger/OpenAPI UI bundled yet
 - No Flyway/Liquibase migrations yet; schema is managed by Hibernate in the current MVP
 
 ## Documentation

@@ -66,6 +66,13 @@ public class GetWorkflowService {
         return workflowVersionRepository.findFirstByWorkflowIdOrderByVersionNumberDesc(workflowId).orElse(null);
     }
 
+    @Transactional(readOnly = true)
+    public WorkflowVersion getPublishedVersionById(String workflowId) {
+        return workflowVersionRepository
+            .findByWorkflowIdAndStatus(workflowId, VersionStatus.PUBLISHED)
+            .orElseThrow(() -> new ResourceNotFound("Published workflow version not found", null));
+    }
+
     public WorkflowVersion loadGraph(WorkflowVersion version) {
         List<Node> nodes = nodeRepository.findByWorkflowVersionId(version.getId());
         List<Edge> edges = edgeRepository.findByWorkflowVersionId(version.getId());

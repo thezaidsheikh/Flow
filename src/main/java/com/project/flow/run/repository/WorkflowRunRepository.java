@@ -1,6 +1,7 @@
 package com.project.flow.run.repository;
 
 import com.project.flow.run.domain.WorkflowRun;
+import java.util.List;
 import java.util.Optional;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -12,4 +13,6 @@ public interface WorkflowRunRepository extends JpaRepository<WorkflowRun, String
     Page<WorkflowRun> findByWorkflowIdAndUserIdOrderByStartedAtDesc(String workflowId, String userId, Pageable pageable);
 
     Optional<WorkflowRun> findByIdAndUserId(String id, String userId);
+
+    List<WorkflowRun> findByWorkflowId(String workflowId);
 }

@@ -12,5 +12,6 @@ public record WorkflowResponse(
     String status,
     Integer versionNumber,
     OffsetDateTime createdAt,
-    OffsetDateTime updatedAt
+    OffsetDateTime updatedAt,
+    String webhookUrl
 ) {}
