@@ -2,11 +2,13 @@
 FROM eclipse-temurin:21-jdk AS build
 WORKDIR /app
 
-COPY gradlew settings.gradle build.gradle ./
-COPY gradle gradle
+COPY gradlew .
+COPY settings.gradle .
+COPY build.gradle .
+COPY gradle/ gradle/
 RUN ./gradlew dependencies --no-daemon
 
-COPY src src
+COPY src/ src/
 RUN ./gradlew bootJar --no-daemon
 
 # Stage 2: Run
@@ -17,4 +19,5 @@ COPY --from=build /app/build/libs/*.jar app.jar
 
 EXPOSE 3002
 
-ENTRYPOINT ["java", "-jar", "app.jar"]
+# Render sets $PORT at runtime; map it to $APP_PORT so Spring picks it up
+ENTRYPOINT ["sh", "-c", "APP_PORT=${PORT:-3002} java -jar app.jar"]
