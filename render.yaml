@@ -3,6 +3,7 @@ services:
     name: flow-api
     runtime: docker
     dockerfilePath: ./Dockerfile
+    healthCheckPath: /api/v1/actuator/health
     envVars:
       - key: SPRING_PROFILES_ACTIVE
         value: prod
@@ -18,5 +19,3 @@ services:
         value: "3600000"
       - key: CORS_ALLOWED_ORIGINS
         value: "https://your-frontend-domain.com"
-      - key: APP_PORT
-        value: "3002"
