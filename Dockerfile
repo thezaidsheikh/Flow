@@ -20,4 +20,5 @@ COPY --from=build /app/build/libs/*.jar app.jar
 EXPOSE 3002
 
 # Render sets $PORT at runtime; map it to $APP_PORT so Spring picks it up
-ENTRYPOINT ["sh", "-c", "APP_PORT=${PORT:-3002} java -jar app.jar"]
+# Pass all env vars through to the Java process
+ENTRYPOINT ["sh", "-c", "APP_PORT=${PORT:-3002} java -Dspring.profiles.active=${SPRING_PROFILES_ACTIVE:-prod} -jar app.jar"]
