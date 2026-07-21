@@ -1,0 +1,12 @@
+.git
+.gradle
+build/
+bin/
+out/
+.idea
+.vscode
+.env
+.env.*
+node_modules
+*.log
+.DS_Store
