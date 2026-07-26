@@ -8,8 +8,10 @@ import com.project.flow.credential.service.GetCredentialService;
 import com.project.flow.execution.orchestrator.WorkflowExecutionOrchestrator;
 import com.project.flow.run.dto.response.WorkflowRunDetailResponse;
 import com.project.flow.workflow.domain.Node;
+import com.project.flow.workflow.domain.Workflow;
 import com.project.flow.workflow.domain.WorkflowVersion;
 import com.project.flow.workflow.enums.NodeType;
+import com.project.flow.workflow.repository.WorkflowRepository;
 import com.project.flow.workflow.service.GetWorkflowService;
 import com.project.flow.workflow.webhook.domain.WebhookRegistration;
 import com.project.flow.workflow.webhook.repository.WebhookRegistrationRepository;
@@ -48,6 +50,7 @@ public class WebhookRegistrationService {
     private final WorkflowExecutionOrchestrator orchestrator;
     private final GitHubWebhookService gitHubWebhookService;
     private final GetCredentialService getCredentialService;
+    private final WorkflowRepository workflowRepository;
 
     @Value("${app.webhook.base-url:}")
     private String webhookBaseUrl;
@@ -129,9 +132,15 @@ public class WebhookRegistrationService {
             "WEBHOOK"
         );
 
+        String workflowName = workflowRepository
+            .findByIdAndUserId(run.getWorkflowId(), run.getUserId())
+            .map(Workflow::getName)
+            .orElse("Unknown Workflow");
+
         return new WorkflowRunDetailResponse(
             run.getId(),
             run.getWorkflowId(),
+            workflowName,
             run.getWorkflowVersionId(),
             run.getStatus().name(),
             run.getTriggerType(),
