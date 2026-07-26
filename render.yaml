@@ -20,4 +20,4 @@ services:
       - key: CORS_ALLOWED_ORIGINS
         value: "https://flow-frontend.netlify.app"
       - key: WEBHOOK_BASE_URL
-        value: "https://flow-api.onrender.com/api/v1"
+        value: "https://flow-zlyl.onrender.com/api/v1"
