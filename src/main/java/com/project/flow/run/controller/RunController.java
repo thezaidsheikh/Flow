@@ -8,6 +8,7 @@ import com.project.flow.run.dto.response.WorkflowRunDetailResponse;
 import com.project.flow.run.dto.response.WorkflowRunPageResponse;
 import com.project.flow.run.service.GetRunLogsService;
 import com.project.flow.run.service.GetRunService;
+import com.project.flow.run.service.ListAllRunsService;
 import com.project.flow.run.service.ListWorkflowRunsService;
 import com.project.flow.run.service.RunWorkflowService;
 import io.swagger.v3.oas.annotations.Operation;
@@ -33,6 +34,7 @@ public class RunController {
 
     private final RunWorkflowService runWorkflowService;
     private final ListWorkflowRunsService listWorkflowRunsService;
+    private final ListAllRunsService listAllRunsService;
     private final GetRunService getRunService;
     private final GetRunLogsService getRunLogsService;
     private final CurrentUserProvider currentUserProvider;
@@ -67,6 +69,20 @@ public class RunController {
         String userId = currentUserProvider.getCurrentUserId();
         WorkflowRunPageResponse response = listWorkflowRunsService.execute(id, userId, Math.max(page, 0), Math.min(Math.max(size, 1), 100));
         return ApiResponse.<WorkflowRunPageResponse>builder().success(true).statusCode(200).message("Workflow runs retrieved successfully").data(response).build();
+    }
+
+    @GetMapping("/runs")
+    @Operation(summary = "List all runs", description = "Get paginated execution history across all workflows for the authenticated user.")
+    @ApiResponses({
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "Runs retrieved successfully")
+    })
+    public ApiResponse<WorkflowRunPageResponse> listAllRuns(
+        @Parameter(description = "Page number (0-based)") @RequestParam(defaultValue = "0") int page,
+        @Parameter(description = "Items per page (1-100)") @RequestParam(defaultValue = "20") int size
+    ) {
+        String userId = currentUserProvider.getCurrentUserId();
+        WorkflowRunPageResponse response = listAllRunsService.execute(userId, Math.max(page, 0), Math.min(Math.max(size, 1), 100));
+        return ApiResponse.<WorkflowRunPageResponse>builder().success(true).statusCode(200).message("Runs retrieved successfully").data(response).build();
     }
 
     @GetMapping("/runs/{runId}")

@@ -5,6 +5,7 @@ import java.time.OffsetDateTime;
 public record WorkflowRunSummaryResponse(
     String id,
     String workflowId,
+    String workflowName,
     String workflowVersionId,
     String status,
     String triggerType,
