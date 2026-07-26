@@ -1030,18 +1030,18 @@ Webhook triggers allow external services (GitHub, Stripe, Slack, etc.) to trigge
 
 #### How Webhook Triggers Work
 
-1. **Create a workflow** with a trigger node where `sub_type` is `WEBHOOK` and `config` contains a `secret` (optional, for HMAC validation).
-2. **Publish the workflow** -- the system generates a unique webhook URL.
-3. **Configure the external service** to send POST requests to the webhook URL.
+1. **Create a workflow** with a trigger node where `sub_type` is `WEBHOOK` or `GITHUB_PUSH`.
+2. **Publish the workflow** -- the system generates a unique webhook URL. For `GITHUB_PUSH` triggers, the system also automatically creates a webhook on the GitHub repository via the GitHub API.
+3. **Configure the external service** (or let the auto-created webhook handle it) to send POST requests to the webhook URL.
 4. **The webhook payload** becomes available in the workflow as `${trigger.*}` template variables.
 
-#### Webhook Trigger Node Configuration
+#### Webhook Trigger Node Configuration (WEBHOOK)
 
-When saving a draft, use this structure for the trigger node:
+For generic webhook triggers, use this structure:
 
 ```json
 {
-  "name": "GitHub Webhook",
+  "name": "Incoming Webhook",
   "type": "TRIGGER",
   "sub_type": "WEBHOOK",
   "config": {
@@ -1054,7 +1054,91 @@ When saving a draft, use this structure for the trigger node:
 |---|---|---|---|
 | `secret` | string | No | Shared secret for HMAC-SHA256 signature validation. If set, incoming requests must include a valid `X-Hub-Signature-256` header. |
 
+#### GitHub Push Trigger Node Configuration (GITHUB_PUSH)
+
+For GitHub push triggers that auto-create webhooks on publish, use this structure:
+
+```json
+{
+  "name": "GitHub Push",
+  "type": "TRIGGER",
+  "sub_type": "GITHUB_PUSH",
+  "config": {
+    "credentialId": "your-credential-uuid",
+    "repo": "owner/repo",
+    "sourceBranch": "feature/*",
+    "targetBranch": "main",
+    "secret": "your-shared-hmac-secret",
+    "events": ["push"]
+  }
+}
+```
+
+| Config Field | Type | Required | Description |
+|---|---|---|---|
+| `credentialId` | string | Yes | UUID of the stored GitHub credential (containing a `token` with `repo` scope). |
+| `repo` | string | Yes | GitHub repository in `owner/repo` format. |
+| `sourceBranch` | string | No | Glob pattern to filter which source branches trigger the workflow (e.g. `feature/*`, `bugfix/*`). If omitted, pushes from any branch trigger the workflow. |
+| `targetBranch` | string | No | The target/base branch for PR creation. Available in downstream nodes as `${trigger.target_branch}`. |
+| `secret` | string | No | Shared secret for HMAC-SHA256 signature validation of incoming webhook payloads. |
+| `events` | array | No | GitHub events to subscribe to. Defaults to `["push"]`. |
+
+**Auto-created webhook behavior:**
+
+- On publish, the system calls `POST /repos/{owner}/{repo}/hooks` with the webhook callback URL.
+- The webhook callback URL is `{WEBHOOK_BASE_URL}/hooks/{path}` where `{path}` is auto-generated.
+- On unpublish or workflow deletion, the GitHub webhook is automatically deleted via `DELETE /repos/{owner}/{repo}/hooks/{hook_id}`.
+- If `sourceBranch` is set, incoming push events are validated against the pattern. Non-matching pushes return `202` with no workflow execution.
+- The trigger data is enriched with `source_branch` (from the push `ref`) and `target_branch` (from config) for use in downstream nodes.
+
+**Example: Auto-create PR on push**
+
+Combine a `GITHUB_PUSH` trigger with a `create_pull_request` action node:
+
+```json
+{
+  "nodes": [
+    {
+      "name": "GitHub Push",
+      "type": "TRIGGER",
+      "sub_type": "GITHUB_PUSH",
+      "config": {
+        "credentialId": "cred-uuid-here",
+        "repo": "owner/repo",
+        "sourceBranch": "feature/*",
+        "targetBranch": "main"
+      }
+    },
+    {
+      "name": "Create PR",
+      "type": "ACTION",
+      "sub_type": "github_pr",
+      "config": {
+        "provider": "github",
+        "action": "create_pull_request",
+        "credentialId": "cred-uuid-here",
+        "inputs": {
+          "repo": "owner/repo",
+          "title": "Auto PR from ${trigger.source_branch}",
+          "head": "${trigger.source_branch}",
+          "base": "${trigger.target_branch}",
+          "body": "Automated PR created by Flow"
+        }
+      }
+    }
+  ],
+  "edges": [
+    {
+      "source_node_id": "node-trigger-uuid",
+      "target_node_id": "node-action-uuid"
+    }
+  ]
+}
+```
+
 > **Note:** The webhook URL is generated server-side using `SHA-256(workflowId:nodeId)` and does not need to be specified by the user.
+
+> **Configuration required:** Set `WEBHOOK_BASE_URL` environment variable to your publicly accessible API base URL (e.g. `https://your-app.onrender.com/api/v1`). This is used as the callback URL for GitHub webhooks.
 
 #### 4.1 Receive Webhook
 

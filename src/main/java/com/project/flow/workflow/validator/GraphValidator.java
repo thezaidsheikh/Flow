@@ -11,6 +11,8 @@ import org.springframework.stereotype.Component;
 @Component
 public class GraphValidator {
 
+    private static final String GITHUB_PUSH_TRIGGER_SUBTYPE = "GITHUB_PUSH";
+
     public void validateGraph(WorkflowVersion version) {
         if (version.getNodes() == null || version.getNodes().isEmpty()) {
             throw new InvalidRequestException("Workflow must have at least one node", null);
@@ -28,7 +30,34 @@ public class GraphValidator {
             throw new InvalidRequestException("Workflow must contain only one trigger node for manual execution", null);
         }
 
+        validateGitHubPushTriggerNodes(version);
         validateEdges(version);
+    }
+
+    private void validateGitHubPushTriggerNodes(WorkflowVersion version) {
+        version.getNodes().stream()
+            .filter(node -> node.getType() == NodeType.TRIGGER
+                && GITHUB_PUSH_TRIGGER_SUBTYPE.equalsIgnoreCase(node.getSubType()))
+            .forEach(node -> {
+                if (node.getConfig() == null) {
+                    throw new InvalidRequestException(
+                        "GitHub push trigger node '" + node.getName() + "' must have a configuration", null);
+                }
+                requireConfigField(node, "credentialId");
+                requireConfigField(node, "repo");
+            });
+    }
+
+    @SuppressWarnings("unchecked")
+    private void requireConfigField(Node node, String field) {
+        if (node.getConfig() instanceof java.util.Map<?, ?> map) {
+            Object value = map.get(field);
+            if (value instanceof String s && !s.isBlank()) {
+                return;
+            }
+        }
+        throw new InvalidRequestException(
+            "GitHub push trigger node '" + node.getName() + "' must have a '" + field + "' in its configuration", null);
     }
 
     private void validateEdges(WorkflowVersion version) {
