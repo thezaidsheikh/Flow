@@ -62,7 +62,10 @@ public class GithubConnectorAdapter implements IConnectorAdapter {
             throw new InvalidRequestException("Title input is required", null);
         }
         if (head == null || head.isBlank()) {
-            head = "feature/flow-automation";
+            throw new InvalidRequestException(
+                "Head branch input is required. Use ${trigger.source_branch} to reference the branch from the webhook trigger.",
+                null
+            );
         }
         if (base == null || base.isBlank()) {
             base = "main";

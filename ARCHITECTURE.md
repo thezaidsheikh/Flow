@@ -38,6 +38,8 @@ The application exposes a REST API and stores state in PostgreSQL.
 - Publish validation
 - Workflow read APIs
 - Webhook trigger registration and lifecycle
+- GitHub webhook auto-creation on publish
+- Branch filtering for incoming webhook events
 
 ### `execution`
 
@@ -120,10 +122,29 @@ POST /hooks/{path} (no JWT, HMAC validated)
 -> look up webhook_registrations by path
 -> verify HMAC-SHA256 signature if secret is configured
 -> parse request body as trigger data
+-> if sourceBranch filter is set, validate push ref matches (glob supported)
+-> enrich trigger data with source_branch and target_branch
 -> load published workflow version
 -> create workflow_run row (trigger_type=WEBHOOK, userId=system)
 -> execute nodes in-process
--> return 202 Accepted with run details
+-> return 202 Accepted with run details (or 202 with null data if branch filter rejects)
+```
+
+### GitHub push webhook lifecycle
+
+```text
+Publish workflow with GITHUB_PUSH trigger node
+-> validate node config has credentialId and repo
+-> load user's encrypted GitHub token from credential
+-> POST /repos/{owner}/{repo}/hooks via GitHub API
+   { config: { url: "{base-url}/hooks/{path}", content_type: "json", secret: "..." } }
+-> store github_hook_id and github_hook_url on WebhookRegistration
+
+Unpublish or delete workflow
+-> for each registration with github_hook_id:
+   -> load user's GitHub token
+   -> DELETE /repos/{owner}/{repo}/hooks/{hook_id} via GitHub API
+-> deactivate or delete internal registrations
 ```
 
 ## Graph rules
@@ -132,7 +153,9 @@ Current publish and runtime rules:
 
 - at least one node is required
 - exactly one trigger node is supported per workflow
-- trigger nodes support `sub_type` values: `WEBHOOK` (registers a webhook URL on publish)
+- trigger nodes support `sub_type` values: `WEBHOOK` (registers a webhook URL on publish), `GITHUB_PUSH` (registers a webhook URL AND creates a webhook on GitHub via API)
+- `GITHUB_PUSH` trigger nodes must have `credentialId` and `repo` in their config
+- `GITHUB_PUSH` trigger nodes may optionally have `sourceBranch` (glob pattern for filtering) and `targetBranch` (used as PR base in downstream ACTION nodes)
 - edges must point to existing nodes
 - only condition nodes may have multiple outgoing edges
 

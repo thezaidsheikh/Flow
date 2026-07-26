@@ -15,6 +15,8 @@ Workflow creation, draft management, publish lifecycle, graph validation.
 - SaveDraftService
 - PublishWorkflowService
 - GetWorkflowService
+- WebhookRegistrationService
+- GitHubWebhookService
 
 ## Avoid
 - Execution logic here

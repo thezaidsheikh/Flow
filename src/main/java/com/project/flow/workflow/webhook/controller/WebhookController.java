@@ -49,6 +49,15 @@ public class WebhookController {
 
         WorkflowRunDetailResponse response = webhookRegistrationService.executeWebhook(path, rawBody, signature);
 
+        if (response == null) {
+            return ApiResponse.<WorkflowRunDetailResponse>builder()
+                .success(true)
+                .statusCode(202)
+                .message("Webhook received but ignored due to branch filter")
+                .data(null)
+                .build();
+        }
+
         return ApiResponse.<WorkflowRunDetailResponse>builder()
             .success(true)
             .statusCode(202)

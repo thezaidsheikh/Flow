@@ -9,7 +9,8 @@ import org.springframework.stereotype.Component;
 @Component
 public class ExecutionTemplateResolver {
 
-    private static final Pattern PLACEHOLDER_PATTERN = Pattern.compile("\\$\\{([^}]+)}");
+    private static final Pattern DOLLAR_PLACEHOLDER_PATTERN = Pattern.compile("\\$\\{([^}]+)}");
+    private static final Pattern CURLY_PLACEHOLDER_PATTERN = Pattern.compile("\\{\\{([^}]+)}}");
 
     public Map<String, Object> resolveMap(Map<String, Object> source, WorkflowExecutionContext context) {
         Map<String, Object> resolved = new LinkedHashMap<>();
@@ -19,20 +20,39 @@ public class ExecutionTemplateResolver {
 
     public Object resolveValue(Object value, WorkflowExecutionContext context) {
         if (value instanceof String stringValue) {
-            Matcher matcher = PLACEHOLDER_PATTERN.matcher(stringValue);
-            if (matcher.matches()) {
-                return context.resolvePath(matcher.group(1));
+            // Try ${...} syntax first
+            Matcher dollarMatcher = DOLLAR_PLACEHOLDER_PATTERN.matcher(stringValue);
+            if (dollarMatcher.matches()) {
+                return context.resolvePath(dollarMatcher.group(1));
             }
 
             StringBuffer buffer = new StringBuffer();
             boolean found = false;
-            while (matcher.find()) {
+            while (dollarMatcher.find()) {
                 found = true;
-                Object replacement = context.resolvePath(matcher.group(1));
-                matcher.appendReplacement(buffer, Matcher.quoteReplacement(replacement == null ? "" : replacement.toString()));
+                Object replacement = context.resolvePath(dollarMatcher.group(1));
+                dollarMatcher.appendReplacement(buffer, Matcher.quoteReplacement(replacement == null ? "" : replacement.toString()));
             }
             if (found) {
-                matcher.appendTail(buffer);
+                dollarMatcher.appendTail(buffer);
+                return buffer.toString();
+            }
+
+            // Try {{...}} syntax as fallback
+            Matcher curlyMatcher = CURLY_PLACEHOLDER_PATTERN.matcher(stringValue);
+            if (curlyMatcher.matches()) {
+                return context.resolvePath(curlyMatcher.group(1));
+            }
+
+            buffer = new StringBuffer();
+            found = false;
+            while (curlyMatcher.find()) {
+                found = true;
+                Object replacement = context.resolvePath(curlyMatcher.group(1));
+                curlyMatcher.appendReplacement(buffer, Matcher.quoteReplacement(replacement == null ? "" : replacement.toString()));
+            }
+            if (found) {
+                curlyMatcher.appendTail(buffer);
                 return buffer.toString();
             }
         }

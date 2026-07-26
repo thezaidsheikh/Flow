@@ -49,8 +49,23 @@ public class WebhookRegistration extends BaseEntity {
     @Column(name = "node_id", nullable = false)
     private String nodeId;
 
+    @Column(name = "credential_id", length = 100)
+    private String credentialId;
+
     @Column(length = 255)
     private String secret;
+
+    @Column(name = "source_branch", length = 255)
+    private String sourceBranch;
+
+    @Column(name = "target_branch", length = 255)
+    private String targetBranch;
+
+    @Column(name = "github_hook_id")
+    private Long githubHookId;
+
+    @Column(name = "github_hook_url", length = 500)
+    private String githubHookUrl;
 
     @Column(nullable = false)
     @Builder.Default
