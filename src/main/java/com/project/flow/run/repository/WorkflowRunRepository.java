@@ -12,6 +12,8 @@ import org.springframework.stereotype.Repository;
 public interface WorkflowRunRepository extends JpaRepository<WorkflowRun, String> {
     Page<WorkflowRun> findByWorkflowIdAndUserIdOrderByStartedAtDesc(String workflowId, String userId, Pageable pageable);
 
+    Page<WorkflowRun> findByUserIdOrderByStartedAtDesc(String userId, Pageable pageable);
+
     Optional<WorkflowRun> findByIdAndUserId(String id, String userId);
 
     List<WorkflowRun> findByWorkflowId(String workflowId);

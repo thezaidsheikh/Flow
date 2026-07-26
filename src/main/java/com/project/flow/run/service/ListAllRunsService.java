@@ -1,6 +1,6 @@
 package com.project.flow.run.service;
 
-import com.project.flow.common.exception.ResourceNotFound;
+import com.project.flow.run.domain.WorkflowRun;
 import com.project.flow.run.dto.response.WorkflowRunPageResponse;
 import com.project.flow.run.dto.response.WorkflowRunSummaryResponse;
 import com.project.flow.run.repository.WorkflowRunRepository;
@@ -12,16 +12,14 @@ import org.springframework.transaction.annotation.Transactional;
 
 @Service
 @RequiredArgsConstructor
-public class ListWorkflowRunsService {
+public class ListAllRunsService {
 
-    private final WorkflowRepository workflowRepository;
     private final WorkflowRunRepository workflowRunRepository;
+    private final WorkflowRepository workflowRepository;
 
     @Transactional(readOnly = true)
-    public WorkflowRunPageResponse execute(String workflowId, String userId, int page, int size) {
-        workflowRepository.findByIdAndUserId(workflowId, userId).orElseThrow(() -> new ResourceNotFound("Workflow not found", null));
-
-        var result = workflowRunRepository.findByWorkflowIdAndUserIdOrderByStartedAtDesc(workflowId, userId, PageRequest.of(page, size));
+    public WorkflowRunPageResponse execute(String userId, int page, int size) {
+        var result = workflowRunRepository.findByUserIdOrderByStartedAtDesc(userId, PageRequest.of(page, size));
         var items = result
             .getContent()
             .stream()
